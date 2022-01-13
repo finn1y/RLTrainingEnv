@@ -11,10 +11,10 @@ class DQN():
         """
             function to initialise the class
 
-            sizes is an array of [number_of_inputs, hidden_layer_neurons, number_of_outputs] 
-            where number of inputs is equivalent to size of a state, hidden layer neurons is 
-            the number of neurons in the hidden layer and number of outputs is equivalent to
-            the number of possible actions
+            sizes is an array of [observations, hidden_size, actions] where observations is an array of 
+            [observations_low, observations_high], hidden_size is the number of neurons in the hidden layer 
+            and actions is an array of [actions_low, actions_high] in turn low is an array of low bounds for 
+            each observation/action and high is an array of high bounds for each observation/action respectively
 
             gamma is the discount factor of future rewards
 
@@ -32,8 +32,8 @@ class DQN():
         self.lr = lr
         self.epsilon = epsilon 
         self.epsilon_decay = epsilon_decay
-        self.n_actions = sizes[2]
-        self.replay_mem = list()
+        self.n_actions = np.shape(sizes[2])[1]
+        self.replay_mem = []
         self.mem_size = mem_size
     
         self.q_net = QNet(sizes) #Q-network instantiation to calculate Q-values
@@ -81,7 +81,7 @@ class DQN():
 
         else:
             #calculate Q-values using Q-network
-            values = self.q_net(obv, training=False)
+            values = self.q_net(np.array([obv]))
             #policy is greedy
             action = np.argmax(values)
 
@@ -94,9 +94,9 @@ class DQN():
         self.epsilon += 1 - np.exp(self.epsilon_decay)
         self.epsilon = 0.1 if self.epsilon < 0.1 else self.epsilon #minimum value for epsilon is 0.1
 
-    def store_episode(self, obv, action, reward, next_obv):
+    def store_step(self, obv, action, reward, next_obv):
         """
-            function to store an episode's tuple of values
+            function to store a step's tuple of values
 
             obv is the observation of the current state
 
@@ -106,10 +106,10 @@ class DQN():
 
             next obv is the observation of the next state after action has been applied to the current state
         """
-        #appends dictionary of episode tuple to replay memory
+        #appends dictionary of step tuple to replay memory
         self.replay_mem.append({"obv": obv, "action": action, "reward": reward, "next_obv": next_obv})
 
-        #if replay memory is greater than maximum size then remove oldest episode
+        #if replay memory is greater than maximum size then remove oldest step
         if len(self.replay_mem) > self.mem_size:
             self.replay_mem.pop(0)
 
@@ -123,7 +123,7 @@ class DQN():
         """
         indices = np.random.choice(range(len(self.replay_mem)), size=batch_size)
 
-        #samples of each piece of data from a random episode in replay memory
+        #samples of each piece of data from a random step in replay memory
         obv_batch = np.array([self.replay_mem[i]["obv"] for i in indices], dtype=np.float32)
         action_batch = np.array([self.replay_mem[i]["action"] for i in indices])
         reward_batch = np.array([self.replay_mem[i]["reward"] for i in indices], dtype=np.float32)
@@ -138,7 +138,7 @@ class DQN():
 
         with tf.GradientTape() as tape:
             values = self.q_net(obv_batch)
-            #calculate Q-values based on action taken for each episode
+            #calculate Q-values based on action taken for each step
             values = tf.reduce_sum(values * action_masks, axis=1)
             loss = self.loss_fn(targets, values)
 
@@ -161,20 +161,22 @@ class QNet(tf.keras.Model):
         """
             function to initialise the class
 
-            sizes is an array of [number_of_inputs, hidden_layer_neurons, number_of_outputs] 
-            where number of inputs is equivalent to size of a state, hidden layer neurons is 
-            the number of neurons in the hidden layer and number of outputs is equivalent to
-            the number of possible actions
+            sizes is an array of [observations, hidden_size, actions] where observations is an array of 
+            [observations_low, observations_high], hidden_size is the number of neurons in the hidden layer 
+            and actions is an array of [actions_low, actions_high] in turn low is an array of low bounds for 
+            each observation/action and high is an array of high bounds for each observation/action respectively
+
+            DRQN is a bool to use a long short-term memory (LSTM) in place of the first layer of the neural net if true
         """
         super(QNet, self).__init__()
         #DRQN uses a long short-term memory as the first layer of the network
         if DRQN:
-            self.hidden1 = tf.keras.layers.LSTM(sizes[0])
+            self.hidden1 = tf.keras.layers.LSTM(np.shape(sizes[0])[1])
         else:
-            self.hidden1 = tf.keras.layers.Dense(sizes[0], activation="relu")
+            self.hidden1 = tf.keras.layers.Dense(np.shape(sizes[0])[1], activation="relu")
 
         self.hidden2 = tf.keras.layers.Dense(sizes[1], activation="relu")
-        self.q_vals = tf.keras.layers.Dense(sizes[2], activation="linear")
+        self.q_vals = tf.keras.layers.Dense(np.shape(sizes[2])[1], activation="linear")
 
     def call(self, obv):
         """

@@ -27,6 +27,7 @@ def get_args(envs, algorithms):
     parser.add_argument("-b", "--batch-size", type=int, default=32, help="Number of batches sampled from replay memory during training")
     parser.add_argument("-r", "--render", action="store_true", help="Flag to render environment")
     parser.add_argument("-m", "--model-path", default=None, help="Path to the saved model to continue training")
+    parser.add_argument("-s", "--hidden-size", type=int, default=128, help="Number of neurons in the hidden layer of neural nets")
 
     return parser.parse_args()
 
@@ -71,35 +72,39 @@ if __name__ == "__main__":
 
     args = get_args(envs, algorithms)
 
-    if args.Environment in envs[:2]:
+    if args.Environment in envs[:3]:
         env = gym.make(args.Environment, enable_render=args.render)
     else:
         env = gym.make(args.Environment)
 
     if type(env.action_space) == gym.spaces.discrete.Discrete:
-        num_actions = env.action_space.n
+        actions = [i for i in range(env.action_space.n)]
+#        actions = [i for i in range(env.action_space.start, env.action_space.start + env.action_space.n)]
+        actions = [actions, actions]
     elif type(env.action_space) == gym.spaces.box.Box:
-        num_actions = env.action_space.shape[0]
+        actions = [env.action_space.low, env.action_space.high]
 
     if type(env.observation_space) == gym.spaces.discrete.Discrete:
-        num_observations = env.observation_space.n
+        observations = [i for i in range(env.observation_space.n)]
+#        observations = [i for i in range(env.observation_space.start, env.observation_space.start + env.observation_space.n)]
+        observations = [observations, observations]
     elif type(env.observation_space) == gym.spaces.box.Box:
-        num_observations = env.observation_space.shape[0]
+        observations = [env.observation_space.low, env.observation_space.high]
 
     batch_size = args.batch_size
 
     if args.Algorithm == "qlearning":
-        agent = QLearning([env.observation_space.high, num_actions]) 
+        agent = QLearning([observations, actions]) 
 
-    if args.Algorithm == "dqn" or args.Algorithm == "drqn":
+    if args.Algorithm in algorithms[1:3]:
         recurrent = True if args.Algorithm == "drqn" else False
-        agent = DQN([num_observations, 50, num_actions], DRQN=recurrent, saved_path=args.model_path)
+        agent = DQN([observations, args.hidden_size, actions], DRQN=recurrent, saved_path=args.model_path)
 
     if args.Algorithm == "actor_critic": 
-        agent = ActorCritic([num_observations, 128, num_actions])
+        agent = ActorCritic([observations, args.hidden_size, actions], saved_path=args.model_path)
 
     if args.Algorithm == "policy_gradient":
-        agent = PolicyGradient([num_observations, 128, num_actions])
+        agent = PolicyGradient([observations, args.hidden_size, actions], saved_path=args.model_path)
     
     successes = 0
     all_losses = []
@@ -126,7 +131,7 @@ if __name__ == "__main__":
                 agent.update_epsilon()
                 
             if args.Algorithm in algorithms[1:5]:
-                agent.store_episode(obv, action, reward, next_obv)
+                agent.store_step(obv, action, reward, next_obv)
 
                 if args.Algorithm in algorithms[1:3]:
                     agent.update_epsilon()
@@ -148,7 +153,8 @@ if __name__ == "__main__":
                     successes += 1
 
                 if args.Algorithm in algorithms[3:5]:
-                    ep_losses = agent.train()
+                    loss = agent.train()
+                    ep_losses.append(loss)
 
                 rewards.append(total_reward)
                 all_losses.append(ep_losses)
@@ -163,3 +169,5 @@ if __name__ == "__main__":
     save_data(data, agent, args.Environment, args.Algorithm)
 
     sys.exit(0)
+
+

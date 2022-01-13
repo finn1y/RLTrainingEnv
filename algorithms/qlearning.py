@@ -7,9 +7,10 @@ class QLearning():
         """
             function to initalise the QLearning class
 
-            sizes is an array of [n_observations, n_states, n_actions] where n_states is the total number of states 
-            in the environment, n_observations is the number of values an observation holds and n_actions is the 
-            toal number of possible actions the agent can take
+            sizes is an array of [observations, actions] where observations is an array of 
+            [observations_low, observations_high] and actions is an array of [actions_low, actions_high]
+            in turn low is an array of low bounds for each observation/action and high is an array of high
+            bounds for each observation/action respectively
 
             gamma is a float which is the discount factor of future rewards
 
@@ -23,10 +24,10 @@ class QLearning():
         self.lr = lr
         self.epsilon = epsilon 
         self.epsilon_decay = epsilon_decay
-        self.high = sizes[0]
-        self.n_actions = sizes[1]
+        self.high = sizes[0][1]
+        self.n_actions = np.shape(sizes[1])[1]
 
-        self.q_table = np.zeros((np.sum(self.high + 1), sizes[1]))
+        self.q_table = np.zeros((np.sum(self.high + 1), self.n_actions))
 
     def get_parameters(self):
         """
@@ -84,10 +85,5 @@ class QLearning():
             index_obv += int(obv[i]) + offset
 
         return index_obv
-
-    def __discretise_obv__(self, obv):
-#        discrete_obv = obv / 
-
-        return discrete_obv
 
 

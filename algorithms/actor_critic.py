@@ -11,10 +11,10 @@ class ActorCritic():
         """
             function to initialise the class
 
-            sizes is an array of [number_of_inputs, hidden_layer_neurons, number_of_outputs] 
-            where number of inputs is equivalent to size of a state, hidden layer neurons is 
-            the number of neurons in the hidden layer and number of outputs is equivalent to
-            the number of possible actions
+            sizes is an array of [observations, hidden_size, actions] where observations is an array of 
+            [observations_low, observations_high], hidden_size is the number of neurons in the hidden layer 
+            and actions is an array of [actions_low, actions_high] in turn low is an array of low bounds for 
+            each observation/action and high is an array of high bounds for each observation/action respectively
 
             gamma is the discount factor of future rewards
 
@@ -24,7 +24,7 @@ class ActorCritic():
         """
         self.gamma = gamma
         self.lr = lr
-        self.n_actions = sizes[2]
+        self.n_actions = np.shape(sizes[2])[1]
         self.replay_mem = []
         self.eps = np.finfo(np.float32).eps.item()
 
@@ -66,9 +66,9 @@ class ActorCritic():
 
         return action
 
-    def store_episode(self, obv, action, reward, next_obv):
+    def store_step(self, obv, action, reward, next_obv):
         """
-            function to store an episode's tuple of values
+            function to store an step's tuple of values
 
             obv is the observation of the current state
 
@@ -133,14 +133,15 @@ class ActorCriticNet(tf.keras.Model):
         """
             function to initialise neural network
 
-            sizes is an array of [state_size, hidden_size, action_size] where state_size 
-            is the number of inputs, hidden_size is the number of neurons in the hidden 
-            layer and action_size is the number of actions
+            sizes is an array of [observations, hidden_size, actions] where observations is an array of 
+            [observations_low, observations_high], hidden_size is the number of neurons in the hidden layer 
+            and actions is an array of [actions_low, actions_high] in turn low is an array of low bounds for 
+            each observation/action and high is an array of high bounds for each observation/action respectively
         """
         super().__init__()
-        self.hidden1 = tf.keras.layers.Dense(sizes[0], activation="relu")
+        self.hidden1 = tf.keras.layers.Dense(np.shape(sizes[0])[1], activation="relu")
         self.hidden2 = tf.keras.layers.Dense(sizes[1], activation="relu")
-        self.actor = tf.keras.layers.Dense(sizes[2], activation="softmax")
+        self.actor = tf.keras.layers.Dense(np.shape(sizes[2])[1], activation="softmax")
         self.critic = tf.keras.layers.Dense(1, activation="linear")
 
     def call(self, obv):
