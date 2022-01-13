@@ -3,9 +3,9 @@
 import numpy as np
 import tensorflow as tf
 
-class ActorCritic():
+class PolicyGradient():
     """
-        Class to contain the ACNetwork and all parameters
+        Class to contain the PolicyNetwork and all parameters
     """
     def __init__(self, sizes, gamma=0.9, lr=0.0001, saved_path=None):
         """
@@ -28,13 +28,12 @@ class ActorCritic():
         self.replay_mem = []
         self.eps = np.finfo(np.float32).eps.item()
 
-        self.ac_net = ActorCriticNet(sizes)
+        self.policy_net = PolicyNet(sizes)
         self.opt = tf.keras.optimizers.Adam(learning_rate=self.lr) #Adam optimiser is...
-        self.loss_fn = tf.keras.losses.Huber() #Huber loss is...
 
         #load a saved model (neural net) if provided
         if saved_path:
-            self.ac_net = tf.keras.models.load_model(saved_path, custom_object={"CustomModel": ActorCriticNet})
+            self.policy_net = tf.keras.models.load_model(saved_path, custom_object={"CustomModel": PolicyNet})
 
     def get_parameters(self):
         """
@@ -50,7 +49,7 @@ class ActorCritic():
 
             path is a string of the path to the file where the model will be saved
         """
-        self.ac_net.save(path)
+        self.policy_net.save(path)
 
     def get_action(self, obv):
         """
@@ -61,9 +60,9 @@ class ActorCritic():
 
             returns the action to take
         """
-        action_probs, _ = self.ac_net(np.array([obv]))
+        action_probs = self.policy_net(np.array([obv]))
         action = np.random.choice(self.n_actions, p=action_probs.numpy()[0])
-
+        
         return action
 
     def store_episode(self, obv, action, reward, next_obv):
@@ -77,13 +76,14 @@ class ActorCritic():
             reward is the reward returned when the action is applied to the current state
 
             next obv is the observation of the next state after action has been applied to the current state
+            (placeholder for compatibility across algorithm classes)
         """
         #next_obv is not used in model training 
         self.replay_mem.append({"obv": obv, "action": action, "reward": reward})
 
     def train(self):
         """
-            function to train Actor-Critic network using previous episode data from replay memory
+            function to train Policy network using previous episode data from replay memory
 
             returns the loss of the training as a tensor
         """
@@ -91,7 +91,7 @@ class ActorCritic():
         action_batch = np.array([self.replay_mem[i]["action"] for i in range(np.shape(self.replay_mem)[0])])
         returns = []
         discounted_sum = 0
-    
+
         #calculate the discounted sum of rewards
         for step in self.replay_mem[::-1]:
             discounted_sum = step["reward"] + self.gamma * discounted_sum
@@ -102,62 +102,54 @@ class ActorCritic():
         returns = (returns - np.mean(returns)) / (np.std(returns) + self.eps)
 
         with tf.GradientTape() as tape:
-            action_probs, values = self.ac_net(obv_batch)
+            action_probs = self.policy_net(obv_batch)
 
-            actor_loss = 0
-            critic_loss = 0
+            loss = 0
             for i in range(np.shape(action_probs)[0]):
                 #log probability of the action taken
                 action_log_prob = tf.math.log(action_probs[i, action_batch[i]])
-                advantage = returns[i] - values[i]
-                #sum losses for both actor and critic across episode
-                actor_loss += -action_log_prob * advantage
-                critic_loss += self.loss_fn(values[i], returns[i])
+                #sum loss across episode
+                loss += -action_log_prob * returns[i]
 
-            #total loss is sum of actor and critic losses
-            loss = actor_loss + critic_loss
-
-        grads = tape.gradient(loss, self.ac_net.trainable_variables)
-        self.opt.apply_gradients(zip(grads, self.ac_net.trainable_variables))
+        grads = tape.gradient(loss, self.policy_net.trainable_variables)
+        self.opt.apply_gradients(zip(grads, self.policy_net.trainable_variables))
 
         #replay memory only stores a single episode 
         self.replay_mem.clear()
 
         return loss
 
-class ActorCriticNet(tf.keras.Model):
+class PolicyNet(tf.keras.Model):
     """
-        Class to contain the neural network approximating the policy (actor) and Q-value function (critic)
+        Class to contain the neural network approximating the policy
     """
     def __init__(self, sizes):
         """
-            function to initialise neural network
+            function to initialise the class
 
-            sizes is an array of [state_size, hidden_size, action_size] where state_size 
-            is the number of inputs, hidden_size is the number of neurons in the hidden 
-            layer and action_size is the number of actions
+            sizes is an array of [number_of_inputs, hidden_layer_neurons, number_of_outputs] 
+            where number of inputs is equivalent to size of a state, hidden layer neurons is 
+            the number of neurons in the hidden layer and number of outputs is equivalent to
+            the number of possible actions
         """
-        super().__init__()
+        super(PolicyNet, self).__init__()
         self.hidden1 = tf.keras.layers.Dense(sizes[0], activation="relu")
         self.hidden2 = tf.keras.layers.Dense(sizes[1], activation="relu")
-        self.actor = tf.keras.layers.Dense(sizes[2], activation="softmax")
-        self.critic = tf.keras.layers.Dense(1, activation="linear")
+        self.policy = tf.keras.layers.Dense(sizes[2], activation="softmax")
 
     def call(self, obv):
         """
             function to define the forward pass of the neural network this function is called 
-            when ActorCriticNet(inputs) is called or ActorCriticNet.predict(inputs) is called
+            when QNet(inputs) is called or QNet.predict(inputs) is called
 
             obv is the numpy array or tensor of the inputs values to the neural network
 
-            returns a tuple of tensors (policy, value) where policy is the probability distribution #
-            of the policy and value is the Q-value output by the neural network
+            returns a tensor of the probability distribution of the policy output by the neural network
         """
         obv = self.hidden1(obv)
         obv = self.hidden2(obv)
+        policy = self.policy(obv)
 
-        policy = self.actor(obv)
-        value = self.critic(obv)
+        return policy
 
-        return policy, value
 

@@ -9,6 +9,8 @@ import tensorflow as tf
 
 from algorithms.qlearning import QLearning
 from algorithms.dqn import DQN
+from algorithms.actor_critic import ActorCritic
+from algorithms.policy_grad import PolicyGradient
 
 def get_args(envs, algorithms):
     """
@@ -65,7 +67,7 @@ if __name__ == "__main__":
     envs = ["maze-random-5x5-v0", "maze-random-10x10-v0", "maze-random-100x100-v0", 
             "CartPole-v1", "Acrobot-v1", "MountainCar-v0", "MountainCarContinuous-v0", "Pendulum-v1"]
     #list of all possible algorithms
-    algorithms = ["qlearning", "dqn", "drqn"]
+    algorithms = ["qlearning", "dqn", "drqn", "actor_critic", "policy_gradient"]
 
     args = get_args(envs, algorithms)
 
@@ -92,6 +94,12 @@ if __name__ == "__main__":
     if args.Algorithm == "dqn" or args.Algorithm == "drqn":
         recurrent = True if args.Algorithm == "drqn" else False
         agent = DQN([num_observations, 50, num_actions], DRQN=recurrent, saved_path=args.model_path)
+
+    if args.Algorithm == "actor_critic": 
+        agent = ActorCritic([num_observations, 128, num_actions])
+
+    if args.Algorithm == "policy_gradient":
+        agent = PolicyGradient([num_observations, 128, num_actions])
     
     successes = 0
     all_losses = []
@@ -113,23 +121,24 @@ if __name__ == "__main__":
             action = agent.get_action(obv)
             next_obv, reward, done, _ = env.step(action)
 
-            if args.Algorithm in algorithms[:2]:
-                if args.Algorithm == "qlearning":
-                    agent.train(obv, action, reward, next_obv)
-                
-                if args.Algorithm in algorithms[1:2]:
-                    agent.store_episode(obv, action, reward, next_obv)
-
+            if args.Algorithm == "qlearning":
+                agent.train(obv, action, reward, next_obv)
                 agent.update_epsilon()
+                
+            if args.Algorithm in algorithms[1:5]:
+                agent.store_episode(obv, action, reward, next_obv)
+
+                if args.Algorithm in algorithms[1:3]:
+                    agent.update_epsilon()
             
             obv = next_obv
             total_reward += reward
 
-            if args.Algorithm in algorithms[1:2] and t >= batch_size and t % 4 == 0:
+            if args.Algorithm in algorithms[1:3] and t >= batch_size and t % 4 == 0:
                 loss = agent.train(batch_size)
                 ep_losses.append(loss)
                 
-                if (args.Algorithm in algorithms[1:2]) and i % 10 == 0:
+                if (args.Algorithm in algorithms[1:3]) and i % 10 == 0:
                     agent.update_target_net()
 
             if done or t == (args.time_steps - 1):
@@ -137,6 +146,9 @@ if __name__ == "__main__":
                 
                 if done:
                     successes += 1
+
+                if args.Algorithm in algorithms[3:5]:
+                    ep_losses = agent.train()
 
                 rewards.append(total_reward)
                 all_losses.append(ep_losses)

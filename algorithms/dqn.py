@@ -49,7 +49,6 @@ class DQN():
         if saved_path:
             self.q_net = tf.keras.models.load_model(saved_path, custom_objects={"CustomModel": QNet})
             self.target_net = tf.keras.models.load_model(saved_path, custom_objects={"CustomModel": QNet})
-            #self.target_net.set_weights(self.q_net.get_weights())
 
     def get_parameters(self):
         """
@@ -68,15 +67,13 @@ class DQN():
         """
         self.q_net.save(path)
 
-    def get_action(self, obv) -> int:
+    def get_action(self, obv):
         """
             function to get the action based on the current observation using an epsilon-greedy policy
 
             obv is the current observation of the state
 
-            update epsilon is a bool to determine if to update epsilon's value
-
-            returns the action to take as an int
+            returns the action to take
         """
         #take random action with probability epsilon (explore rate)
         if np.random.uniform(0, 1) < self.epsilon:
@@ -122,8 +119,6 @@ class DQN():
 
             batch size is the number of experiences to train the Q-network with
 
-            update target net is a bool to determine if to update the target network's weights
-
             returns the loss of the training as a tensor
         """
         indices = np.random.choice(range(len(self.replay_mem)), size=batch_size)
@@ -146,7 +141,7 @@ class DQN():
             #calculate Q-values based on action taken for each episode
             values = tf.reduce_sum(values * action_masks, axis=1)
             loss = self.loss_fn(targets, values)
-            
+
         grads = tape.gradient(loss, self.q_net.trainable_variables)
         self.opt.apply_gradients(zip(grads, self.q_net.trainable_variables))
             

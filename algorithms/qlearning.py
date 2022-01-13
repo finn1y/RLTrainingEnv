@@ -36,7 +36,7 @@ class QLearning():
         """
         return {"gamma": self.gamma, "epsilon": self.epsilon, "epsilon_decay": self.epsilon_decay, "lr": self.lr}
 
-    def get_action(self, obv) -> int:
+    def get_action(self, obv):
         """
             function to get the action based on the current observation using an epsilon-greedy policy
 
@@ -57,7 +57,7 @@ class QLearning():
             #policy is greedy
             action = np.argmax(self.q_table[obv])
 
-        return int(action)
+        return action
 
     def update_epsilon(self):
         """
