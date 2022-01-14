@@ -131,13 +131,14 @@ class PolicyNet(tf.keras.Model):
             [observations_low, observations_high], hidden_size is the number of neurons in the hidden layer 
             and actions is an array of [actions_low, actions_high] in turn low is an array of low bounds for 
             each observation/action and high is an array of high bounds for each observation/action respectively
+
+            continuous is a bool to determine if the action space is continuous
         """
         super(PolicyNet, self).__init__()
         self.hidden1 = tf.keras.layers.Dense(np.shape(sizes[0])[1], activation="relu")
         self.hidden2 = tf.keras.layers.Dense(sizes[1], activation="relu")
-        #self.policy = tf.keras.layers.Dense(np.shape(sizes[2])[1], activation="tanh")
         self.policy = tf.keras.layers.Dense(np.shape(sizes[2])[1], activation="softmax")
-
+    
     def call(self, obv):
         """
             function to define the forward pass of the neural network this function is called 

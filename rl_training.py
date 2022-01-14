@@ -9,8 +9,9 @@ import tensorflow as tf
 
 from algorithms.qlearning import QLearning
 from algorithms.dqn import DQN
-from algorithms.actor_critic import ActorCritic
 from algorithms.policy_grad import PolicyGradient
+from algorithms.actor_critic import ActorCritic
+from algorithms.ddpg import DDPG
 
 def get_args(envs, algorithms):
     """
@@ -68,7 +69,7 @@ if __name__ == "__main__":
     envs = ["maze-random-5x5-v0", "maze-random-10x10-v0", "maze-random-100x100-v0", 
             "CartPole-v1", "Acrobot-v1", "MountainCar-v0", "MountainCarContinuous-v0", "Pendulum-v1"]
     #list of all possible algorithms
-    algorithms = ["qlearning", "dqn", "drqn", "actor_critic", "policy_gradient"]
+    algorithms = ["qlearning", "dqn", "drqn", "policy_gradient", "actor_critic", "ddpg"]
 
     args = get_args(envs, algorithms)
 
@@ -92,7 +93,7 @@ if __name__ == "__main__":
         observations = [env.observation_space.low, env.observation_space.high]
 
     batch_size = args.batch_size
-
+    
     if args.Algorithm == "qlearning":
         agent = QLearning([observations, actions]) 
 
@@ -100,11 +101,14 @@ if __name__ == "__main__":
         recurrent = True if args.Algorithm == "drqn" else False
         agent = DQN([observations, args.hidden_size, actions], DRQN=recurrent, saved_path=args.model_path)
 
+    if args.Algorithm == "policy_gradient":
+        agent = PolicyGradient([observations, args.hidden_size, actions], saved_path=args.model_path)
+
     if args.Algorithm == "actor_critic": 
         agent = ActorCritic([observations, args.hidden_size, actions], saved_path=args.model_path)
 
-    if args.Algorithm == "policy_gradient":
-        agent = PolicyGradient([observations, args.hidden_size, actions], saved_path=args.model_path)
+    if args.Algorithm == "ddpg":
+        agent = DDPG([observations, args.hidden_size, actions], saved_path=args.model_path)
     
     successes = 0
     all_losses = []
@@ -130,7 +134,7 @@ if __name__ == "__main__":
                 agent.train(obv, action, reward, next_obv)
                 agent.update_epsilon()
                 
-            if args.Algorithm in algorithms[1:5]:
+            if args.Algorithm in algorithms[1:6]:
                 agent.store_step(obv, action, reward, next_obv)
 
                 if args.Algorithm in algorithms[1:3]:
@@ -139,11 +143,11 @@ if __name__ == "__main__":
             obv = next_obv
             total_reward += reward
 
-            if args.Algorithm in algorithms[1:3] and t >= batch_size and t % 4 == 0:
+            if (args.Algorithm in algorithms[1:3] or args.Algorithm == "ddpg") and t >= batch_size and t % 4 == 0:
                 loss = agent.train(batch_size)
                 ep_losses.append(loss)
                 
-                if (args.Algorithm in algorithms[1:3]) and i % 10 == 0:
+                if t % 20 == 0:
                     agent.update_target_net()
 
             if done or t == (args.time_steps - 1):

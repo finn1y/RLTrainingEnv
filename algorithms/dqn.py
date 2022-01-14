@@ -44,6 +44,7 @@ class DQN():
         #back propagation and gardient calculations are not performed on this network intead it 
         #is updated with the weights from the Q-network at set intervals
         self.target_net = QNet(sizes)
+        self.target_net.set_weights(self.q_net.get_weights())
 
         #load a saved model (neural net) if provided
         if saved_path:
@@ -129,7 +130,7 @@ class DQN():
         reward_batch = np.array([self.replay_mem[i]["reward"] for i in indices], dtype=np.float32)
         next_obv_batch = np.array([self.replay_mem[i]["next_obv"] for i in indices], dtype=np.float32)
 
-        targets = self.target_net.predict(next_obv_batch)
+        targets = self.target_net(next_obv_batch)
         #calculate expected reward for each sample
         targets = reward_batch + self.gamma * np.max(targets, axis=1)
 

@@ -138,7 +138,7 @@ class ActorCriticNet(tf.keras.Model):
             and actions is an array of [actions_low, actions_high] in turn low is an array of low bounds for 
             each observation/action and high is an array of high bounds for each observation/action respectively
         """
-        super().__init__()
+        super(ActorCriticNet, self).__init__()
         self.hidden1 = tf.keras.layers.Dense(np.shape(sizes[0])[1], activation="relu")
         self.hidden2 = tf.keras.layers.Dense(sizes[1], activation="relu")
         self.actor = tf.keras.layers.Dense(np.shape(sizes[2])[1], activation="softmax")
