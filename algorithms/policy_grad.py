@@ -7,7 +7,7 @@ class PolicyGradient():
     """
         Class to contain the PolicyNetwork and all parameters
     """
-    def __init__(self, sizes, gamma=0.9, lr=0.0001, saved_path=None):
+    def __init__(self, sizes, gamma=0.9, lr=0.1, lr_decay=0.9, lr_decay_steps=10000, saved_path=None):
         """
             function to initialise the class
 
@@ -20,16 +20,22 @@ class PolicyGradient():
 
             lr is the learning rate of the neural network
 
+            lr_decay is a float which is the rate at which the learning rate will decay exponentially
+
+            lr_decay_steps is an int which is the number of time steps to decay the learning rate
+
             saved_path is a string of the path to the saved Actor-Critic network if one is being loaded
         """
         self.gamma = gamma
         self.lr = lr
+        self.lr_decay = lr_decay
         self.n_actions = np.shape(sizes[2])[1]
         self.replay_mem = []
         self.eps = np.finfo(np.float32).eps.item()
 
         self.policy_net = PolicyNet(sizes)
-        self.opt = tf.keras.optimizers.Adam(learning_rate=self.lr) #Adam optimiser is...
+        self.lr_decay_fn = tf.keras.optimizers.schedules.ExponentialDecay(self.lr, decay_steps=lr_decay_steps, decay_rate=self.lr_decay)
+        self.opt = tf.keras.optimizers.Adam(learning_rate=self.lr_decay_fn) #Adam optimiser is...
 
         #load a saved model (neural net) if provided
         if saved_path:
@@ -41,7 +47,7 @@ class PolicyGradient():
 
             returns a dict with all the algorithm parameters
         """
-        return {"gamma": self.gamma, "lr": self.lr}
+        return {"gamma": self.gamma, "lr": self.lr, "lr_decay": self.lr_decay}
 
     def save_model(self, path):
         """

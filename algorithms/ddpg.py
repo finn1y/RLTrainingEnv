@@ -7,7 +7,7 @@ class DDPG():
     """
         Class to contain the PolicyNetwork and all parameters
     """
-    def __init__(self, sizes, gamma=0.9, lr=0.0001, mem_size=10000, saved_path=None):
+    def __init__(self, sizes, gamma=0.9, lr=0.1, lr_decay=0.9, lr_decay_steps=10000, mem_size=10000, saved_path=None):
         """
             function to initialise the class
 
@@ -20,10 +20,15 @@ class DDPG():
 
             lr is the learning rate of the neural network
 
+            lr_decay is a float which is the rate at which the learning rate will decay exponentially
+
+            lr_decay_steps is an int which is the number of time steps to decay the learning rate
+
             saved_path is a string of the path to the saved Actor-Critic network if one is being loaded
         """
         self.gamma = gamma
         self.lr = lr
+        self.lr_decay = lr_decay
         self.n_actions = np.shape(sizes[2])[1]
         self.replay_mem = []
         self.mem_size = mem_size
@@ -32,8 +37,9 @@ class DDPG():
 
         self.actor_net = ActorNet(sizes)
         self.critic_net = CriticNet(sizes)
-        self.actor_opt = tf.keras.optimizers.Adam(learning_rate=self.lr) #Adam optimiser is...
-        self.critic_opt = tf.keras.optimizers.Adam(learning_rate=(self.lr * 2))
+        self.lr_decay_fn = tf.keras.optimizers.schedules.ExponentialDecay(self.lr, decay_steps=lr_decay_steps, decay_rate=self.lr_decay)
+        self.actor_opt = tf.keras.optimizers.Adam(learning_rate=self.lr_decay_fn) #Adam optimiser is...
+        self.critic_opt = tf.keras.optimizers.Adam(learning_rate=self.lr_decay_fn) #Adam optimiser is...
 
         self.actor_target = ActorNet(sizes)
         self.actor_target.set_weights(self.actor_net.get_weights())
@@ -51,7 +57,7 @@ class DDPG():
 
             returns a dict with all the algorithm parameters
         """
-        return {"gamma": self.gamma, "lr": self.lr}
+        return {"gamma": self.gamma, "lr": self.lr, "lr_decay": self.lr_decay, "mem_size": self.mem_size}
 
     def save_model(self, path):
         """

@@ -7,7 +7,7 @@ class DQN():
     """
         Class to contain the QNetwork and all parameters
     """
-    def __init__(self, sizes, gamma=0.9, epsilon=1.0, epsilon_decay=0.0000005, lr=0.0001, mem_size=10000, DRQN=False, saved_path=None):
+    def __init__(self, sizes, gamma=0.9, epsilon_max=0.8, epsilon_min=0.1, lr=0.1, lr_decay=0.9, lr_decay_steps=10000, mem_size=10000, DRQN=False, saved_path=None):
         """
             function to initialise the class
 
@@ -18,9 +18,15 @@ class DQN():
 
             gamma is the discount factor of future rewards
 
-            epsilon decay is the rate at which the exploration probability epsilon reduces
+            epsilon max is a float which is the maximum exploration rate of the agent
+
+            epsilon min is a float which is the minimum exploration rate of the agent
 
             lr is the learning rate of the neural network
+
+            lr_decay is a float which is the rate at which the learning rate will decay exponentially
+
+            lr_decay_steps is an int which is the number of time steps to decay the learning rate
 
             mem_size is the maximum capacity of the expereince replay memory
 
@@ -30,14 +36,17 @@ class DQN():
         """
         self.gamma = gamma
         self.lr = lr
-        self.epsilon = epsilon 
-        self.epsilon_decay = epsilon_decay
+        self.lr_decay = lr_decay
+        self.epsilon_max = epsilon_max
+        self.epsilon_min = epsilon_min
+        self.epsilon = epsilon_max
         self.n_actions = np.shape(sizes[2])[1]
         self.replay_mem = []
         self.mem_size = mem_size
     
         self.q_net = QNet(sizes) #Q-network instantiation to calculate Q-values
-        self.opt = tf.keras.optimizers.Adam(learning_rate=self.lr) #Adam optimiser is...
+        self.lr_decay_fn = tf.keras.optimizers.schedules.ExponentialDecay(self.lr, decay_steps=lr_decay_steps, decay_rate=self.lr_decay)
+        self.opt = tf.keras.optimizers.Adam(learning_rate=self.lr_decay_fn) #Adam optimiser is...
         self.loss_fn = tf.keras.losses.Huber() #Huber loss is...
 
         #target network to calculate target Q-values
@@ -57,8 +66,8 @@ class DQN():
 
             returns a dict with all the algorithm parameters
         """
-        return {"gamma": self.gamma, "epsilon": self.epsilon, "epsilon_decay": self.epsilon_decay, 
-                "lr": self.lr, "mem_size": self.mem_size}
+        return {"gamma": self.gamma, "epsilon_max": self.epsilon_max, "epsilon_min": self.epsilon_min, 
+                "lr": self.lr, "lr_decay": self.lr_decay,  "mem_size": self.mem_size}
 
     def save_model(self, path):
         """
@@ -88,12 +97,16 @@ class DQN():
 
         return action
 
-    def update_epsilon(self):
+    def update_parameters(self, n_t, n_max):
         """
-            function to update epsilon using exponential decay
+            function to reduce value of epsilon such that it is epsilon max at n_t = 0 and epsilon min at n_t = n_max
+
+            n_t is the current episode number
+
+            n_max is the maximum number of epsiodes
         """
-        self.epsilon += 1 - np.exp(self.epsilon_decay)
-        self.epsilon = 0.1 if self.epsilon < 0.1 else self.epsilon #minimum value for epsilon is 0.1
+        rate = max((n_max - n_t) / n_max, 0) #rate should not be less than zero
+        self.epsilon = rate * (self.epsilon_max - self.epsilon_min) + self.epsilon_min
 
     def store_step(self, obv, action, reward, next_obv):
         """

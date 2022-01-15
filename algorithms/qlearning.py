@@ -3,7 +3,7 @@
 import numpy as np
 
 class QLearning():
-    def __init__(self, sizes, gamma=0.9, epsilon=1.0, epsilon_decay=0.0000005, lr=0.0001):
+    def __init__(self, sizes, gamma=0.9, epsilon_max=0.8, epsilon_min=0.1, lr=0.7, lr_decay=0.95):
         """
             function to initalise the QLearning class
 
@@ -14,20 +14,27 @@ class QLearning():
 
             gamma is a float which is the discount factor of future rewards
 
-            epsilon is a float which is the exploration rate of the agent
+            epsilon max is a float which is the maximum exploration rate of the agent
 
-            epsilon decay is a float which is the rate at which epsilon will decrease exponentially
+            epsilon min is a float which is the minimum exploration rate of the agent
+
+            epsilon decay is a float which is the rate at which epsilon will decrease
 
             lr is a float which is the learning rate of the agent
+
+            lr_decay is a float which is the rate at which the learning rate will decay exponentially
         """
         self.gamma = gamma
         self.lr = lr
-        self.epsilon = epsilon 
-        self.epsilon_decay = epsilon_decay
-        self.high = sizes[0][1]
+        self.lr_decay = lr_decay
+        self.epsilon_max = epsilon_max 
+        self.epsilon_min = epsilon_min
+        self.epsilon = epsilon_max
+        self.high = np.array(sizes[0][1], dtype=int)
         self.n_actions = np.shape(sizes[1])[1]
 
         self.q_table = np.zeros((np.sum(self.high + 1), self.n_actions))
+        print(self.q_table)
 
     def get_parameters(self):
         """
@@ -35,7 +42,7 @@ class QLearning():
 
             returns a dict with all the algorithm parameters
         """
-        return {"gamma": self.gamma, "epsilon": self.epsilon, "epsilon_decay": self.epsilon_decay, "lr": self.lr}
+        return {"gamma": self.gamma, "epsilon_max": self.epsilon_max, "epsilon_min": self.epsilon_min, "lr": self.lr, "lr_decay": self.lr_decay}
 
     def get_action(self, obv):
         """
@@ -48,7 +55,9 @@ class QLearning():
             returns the action to take as an int
         """
         if np.size(self.high) > 1:
-            obv = self.__index_obv__(obv)
+            obv = self.__index_obv__(np.array(obv, dtype=int))
+        else:
+            obv = int(obv)
 
         #take random action with probability epsilon (explore rate)
         if np.random.uniform(0, 1) < self.epsilon:
@@ -60,12 +69,19 @@ class QLearning():
 
         return action
 
-    def update_epsilon(self):
+    def update_parameters(self, n_t, n_max):
         """
-            function to update epsilon using exponential decay
+            function to reduce value of learning parameters such that epsilon is epsilon max at n_t = 0 and 
+            epsilon min at n_t = n_max, and learning rate decays exponentially with a rate of learning rate decay
+
+            n_t is the current episode number
+
+            n_max is the maximum number of epsiodes
         """
-        self.epsilon += 1 - np.exp(self.epsilon_decay)
-        self.epsilon = 0.1 if self.epsilon < 0.1 else self.epsilon #minimum value for epsilon is 0.1
+        rate = max((n_max - n_t) / n_max, 0) #rate should not be less than zero
+        self.epsilon = rate * (self.epsilon_max - self.epsilon_min) + self.epsilon_min
+
+        self.lr *= self.lr_decay ** n_t
 
     def train(self, obv, action, reward, next_obv):
         """
@@ -74,7 +90,7 @@ class QLearning():
         if np.size(self.high) > 1:
             obv = self.__index_obv__(obv)
             next_obv = self.__index_obv__(next_obv)
-
+        
         self.q_table[obv, action] += self.lr * (reward + self.gamma * np.max(self.q_table[next_obv]) - self.q_table[obv, action])
 
     def __index_obv__(self, obv) -> int:
@@ -83,7 +99,5 @@ class QLearning():
         for i in range(np.size(self.high)):
             offset = 0 if i == 0 else int(np.sum(self.high[:i - 1]))
             index_obv += int(obv[i]) + offset
-
         return index_obv
-
 

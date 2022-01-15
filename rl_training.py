@@ -6,6 +6,7 @@ import gym
 import gym_maze
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 
 from algorithms.qlearning import QLearning
 from algorithms.dqn import DQN
@@ -29,6 +30,7 @@ def get_args(envs, algorithms):
     parser.add_argument("-r", "--render", action="store_true", help="Flag to render environment")
     parser.add_argument("-m", "--model-path", default=None, help="Path to the saved model to continue training")
     parser.add_argument("-s", "--hidden-size", type=int, default=128, help="Number of neurons in the hidden layer of neural nets")
+    parser.add_argument("-p", "--plot", action="store_true", help="Flag to plot data after completion")
 
     return parser.parse_args()
 
@@ -67,14 +69,22 @@ def save_data(data, agent, env, algorithm):
 if __name__ == "__main__":
     #list of all possible environements
     envs = ["maze-random-5x5-v0", "maze-random-10x10-v0", "maze-random-100x100-v0", 
+            "maze-sample-5x5-v0", "maze-sample-10x10-v0", "maze-sample-100x100-v0", "gym_robot_maze:robot-maze-v0", 
             "CartPole-v1", "Acrobot-v1", "MountainCar-v0", "MountainCarContinuous-v0", "Pendulum-v1"]
     #list of all possible algorithms
     algorithms = ["qlearning", "dqn", "drqn", "policy_gradient", "actor_critic", "ddpg"]
 
     args = get_args(envs, algorithms)
 
-    if args.Environment in envs[:3]:
+    if args.Algorithm == "ddpg" and args.Environment in envs[:9]:
+        raise Exception(f'DDPG can only be simulated with continuous action spaces: {envs[9:]}')
+    if args.Algorithm in algorithms[:5] and args.Environment in envs[9:]:
+        raise Exception(f'{args.Algorithm} can only be simulated with discrete action spaces: {envs[:9]}')
+
+    if args.Environment in envs[:6]:
         env = gym.make(args.Environment, enable_render=args.render)
+    elif args.Environment in envs[6:7]:
+        env = gym.make(args.Environment, is_render=args.render)
     else:
         env = gym.make(args.Environment)
 
@@ -99,16 +109,16 @@ if __name__ == "__main__":
 
     if args.Algorithm in algorithms[1:3]:
         recurrent = True if args.Algorithm == "drqn" else False
-        agent = DQN([observations, args.hidden_size, actions], DRQN=recurrent, saved_path=args.model_path)
+        agent = DQN([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps,  DRQN=recurrent, saved_path=args.model_path)
 
     if args.Algorithm == "policy_gradient":
-        agent = PolicyGradient([observations, args.hidden_size, actions], saved_path=args.model_path)
+        agent = PolicyGradient([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path)
 
     if args.Algorithm == "actor_critic": 
-        agent = ActorCritic([observations, args.hidden_size, actions], saved_path=args.model_path)
+        agent = ActorCritic([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path)
 
     if args.Algorithm == "ddpg":
-        agent = DDPG([observations, args.hidden_size, actions], saved_path=args.model_path)
+        agent = DDPG([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path)
     
     successes = 0
     all_losses = []
@@ -132,14 +142,10 @@ if __name__ == "__main__":
 
             if args.Algorithm == "qlearning":
                 agent.train(obv, action, reward, next_obv)
-                agent.update_epsilon()
                 
             if args.Algorithm in algorithms[1:6]:
                 agent.store_step(obv, action, reward, next_obv)
 
-                if args.Algorithm in algorithms[1:3]:
-                    agent.update_epsilon()
-            
             obv = next_obv
             total_reward += reward
 
@@ -152,6 +158,9 @@ if __name__ == "__main__":
 
             if done or t == (args.time_steps - 1):
                 print(f'Episode {i} finished after {t} time steps with total reward = {total_reward}')
+
+                if args.Algorithm in algorithms[:3]:
+                    agent.update_parameters(i, args.episodes)
                 
                 if done:
                     successes += 1
@@ -164,13 +173,19 @@ if __name__ == "__main__":
                 all_losses.append(ep_losses)
                 break
 
-            if args.Environment in envs[:2] and env.is_game_over():
+            if args.Environment in envs[:6] and env.is_game_over():
                 sys.exit(0)
 
     print(f'Training complete with {successes}/{args.episodes} episodes completed')
 
     data = {"Parameters": agent.get_parameters(), "rewards": rewards, "losses": all_losses, "successes": successes}
     save_data(data, agent, args.Environment, args.Algorithm)
+
+    if args.plot:
+        plt.plot(data["rewards"], color="blue")
+        plt.xlabel("Episode")
+        plt.ylabel("Reward")
+        plt.show()
 
     sys.exit(0)
 
