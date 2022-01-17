@@ -7,7 +7,7 @@ class ActorCritic():
     """
         Class to contain the ACNetwork and all parameters
     """
-    def __init__(self, sizes, gamma=0.9, lr_decay=0.9, lr=0.1, lr_decay_steps=10000, saved_path=None):
+    def __init__(self, sizes, gamma=0.99, lr_decay=0.9, lr=0.0001, lr_decay_steps=10000, saved_path=None):
         """
             function to initialise the class
 

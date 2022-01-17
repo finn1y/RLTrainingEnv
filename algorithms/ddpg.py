@@ -7,7 +7,7 @@ class DDPG():
     """
         Class to contain the PolicyNetwork and all parameters
     """
-    def __init__(self, sizes, gamma=0.9, lr=0.1, lr_decay=0.9, lr_decay_steps=10000, mem_size=10000, saved_path=None):
+    def __init__(self, sizes, gamma=0.99, lr=0.001, lr_decay=0.9, lr_decay_steps=10000, mem_size=10000, saved_path=None):
         """
             function to initialise the class
 

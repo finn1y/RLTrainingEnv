@@ -7,7 +7,7 @@ class DQN():
     """
         Class to contain the QNetwork and all parameters
     """
-    def __init__(self, sizes, gamma=0.9, epsilon_max=0.8, epsilon_min=0.1, lr=0.1, lr_decay=0.9, lr_decay_steps=10000, mem_size=10000, DRQN=False, saved_path=None):
+    def __init__(self, sizes, gamma=0.99, epsilon_max=1.0, epsilon_min=0.01, lr=0.0001, lr_decay=0.9, lr_decay_steps=10000, mem_size=10000, DRQN=False, saved_path=None):
         """
             function to initialise the class
 
@@ -105,7 +105,7 @@ class DQN():
 
             n_max is the maximum number of epsiodes
         """
-        rate = max((n_max - n_t) / n_max, 0) #rate should not be less than zero
+        rate = max((n_max - (n_t + 1)) / n_max, 0) #rate should not be less than zero
         self.epsilon = rate * (self.epsilon_max - self.epsilon_min) + self.epsilon_min
 
     def store_step(self, obv, action, reward, next_obv):
@@ -139,7 +139,7 @@ class DQN():
 
         #samples of each piece of data from a random step in replay memory
         obv_batch = np.array([self.replay_mem[i]["obv"] for i in indices], dtype=np.float32)
-        action_batch = np.array([self.replay_mem[i]["action"] for i in indices])
+        action_batch = np.array([self.replay_mem[i]["action"] for i in indices], dtype=int)
         reward_batch = np.array([self.replay_mem[i]["reward"] for i in indices], dtype=np.float32)
         next_obv_batch = np.array([self.replay_mem[i]["next_obv"] for i in indices], dtype=np.float32)
 

@@ -31,6 +31,7 @@ def get_args(envs, algorithms):
     parser.add_argument("-m", "--model-path", default=None, help="Path to the saved model to continue training")
     parser.add_argument("-s", "--hidden-size", type=int, default=128, help="Number of neurons in the hidden layer of neural nets")
     parser.add_argument("-p", "--plot", action="store_true", help="Flag to plot data after completion")
+    parser.add_argument("-a", "--agents", type=int, default=1, help="Number of agents")
 
     return parser.parse_args()
 
@@ -64,7 +65,10 @@ def save_data(data, agent, env, algorithm):
         pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     if algorithm != "qlearning":
-        agent.save_model(f'{path}/model{number}')
+        os.makedirs(f'{path}/models')
+
+        for i in range(np.size(agents)):
+            agents[i].save_model(f'{path}/models/agent{number}')
 
 if __name__ == "__main__":
     #list of all possible environements
@@ -82,7 +86,7 @@ if __name__ == "__main__":
         raise Exception(f'{args.Algorithm} can only be simulated with discrete action spaces: {envs[:9]}')
 
     if args.Environment in envs[:6]:
-        env = gym.make(args.Environment, enable_render=args.render)
+        env = gym.make(args.Environment, enable_render=args.render, n_robots=args.agents)
     elif args.Environment in envs[6:7]:
         env = gym.make(args.Environment, is_render=args.render)
     else:
@@ -105,71 +109,86 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     
     if args.Algorithm == "qlearning":
-        agent = QLearning([observations, actions]) 
+        agents = [QLearning([observations, actions]) for i in range(args.agents)]
 
     if args.Algorithm in algorithms[1:3]:
         recurrent = True if args.Algorithm == "drqn" else False
-        agent = DQN([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps,  DRQN=recurrent, saved_path=args.model_path)
+        agents = [DQN([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps,  DRQN=recurrent, saved_path=args.model_path) for i in range(args.agents)]
 
     if args.Algorithm == "policy_gradient":
-        agent = PolicyGradient([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path)
+        agents = [PolicyGradient([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path) for i in range(args.agents)]
 
     if args.Algorithm == "actor_critic": 
-        agent = ActorCritic([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path)
+        agents = [ActorCritic([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path) for i in range(args.agents)]
 
     if args.Algorithm == "ddpg":
-        agent = DDPG([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path)
+        agents = [DDPG([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path) for i in range(args.agents)]
     
     successes = 0
     all_losses = []
-    rewards = []
+    all_rewards = []
 
     if args.render:
         env.render()
     
-    for i in range(args.episodes):
-        obv = env.reset()
+    for e in range(args.episodes):
+        obvs = env.reset()
         ep_losses = []
-        total_reward = 0
+        total_rewards = np.zeros(args.agents)
         done = False
 
         for t in range(args.time_steps):
             if args.render:
                 env.render()
 
-            action = agent.get_action(obv)
-            next_obv, reward, done, _ = env.step(action)
+            actions = np.zeros(args.agents)
+            for i in range(args.agents):
+                actions[i] = agents[i].get_action(obvs[i])
+            
+            next_obvs, rewards, done, _ = env.step(actions)
 
-            if args.Algorithm == "qlearning":
-                agent.train(obv, action, reward, next_obv)
+            for i in range(args.agents):
+                if args.Algorithm == "qlearning":
+                    agents[i].train(obvs[i], actions[i], rewards[i], next_obvs[i])
                 
-            if args.Algorithm in algorithms[1:6]:
-                agent.store_step(obv, action, reward, next_obv)
+                if args.Algorithm in algorithms[1:6]:
+                    agents[i].store_step(obvs[i], actions[i], rewards[i], next_obvs[i])
 
-            obv = next_obv
-            total_reward += reward
+            obvs = next_obvs
+            total_rewards += rewards
 
             if (args.Algorithm in algorithms[1:3] or args.Algorithm == "ddpg") and t >= batch_size and t % 4 == 0:
-                loss = agent.train(batch_size)
+                losses = []
+
+                for i in range(args.agents):    
+                    loss = agents[i].train(batch_size)
+                    losses.append(loss)    
+
+                    if t % 20 == 0:
+                        agents[i].update_target_net()
+
                 ep_losses.append(loss)
                 
-                if t % 20 == 0:
-                    agent.update_target_net()
-
             if done or t == (args.time_steps - 1):
-                print(f'Episode {i} finished after {t} time steps with total reward = {total_reward}')
+                print(f'Episode {e} finished after {t} time steps with total reward = {total_rewards}')
 
-                if args.Algorithm in algorithms[:3]:
-                    agent.update_parameters(i, args.episodes)
-                
                 if done:
                     successes += 1
 
+                if args.Algorithm in algorithms[:3]:
+                    for i in range(args.agents):
+                        agents[i].update_parameters(e, args.episodes)
+                
                 if args.Algorithm in algorithms[3:5]:
-                    loss = agent.train()
-                    ep_losses.append(loss)
+                    losses = []
 
-                rewards.append(total_reward)
+                    for i in range(args.agents):
+                        loss = agents[i].train()
+                        losses.append(loss)
+
+                    ep_losses.append(losses)
+
+                all_rewards.append(total_rewards)
                 all_losses.append(ep_losses)
                 break
 
@@ -178,13 +197,17 @@ if __name__ == "__main__":
 
     print(f'Training complete with {successes}/{args.episodes} episodes completed')
 
-    data = {"Parameters": agent.get_parameters(), "rewards": rewards, "losses": all_losses, "successes": successes}
-    save_data(data, agent, args.Environment, args.Algorithm)
+
+    data = {"Parameters": agents[0].get_parameters(), "rewards": all_rewards, "losses": all_losses, "successes": successes}
+    save_data(data, agents, args.Environment, args.Algorithm)
 
     if args.plot:
-        plt.plot(data["rewards"], color="blue")
+        for i in range(args.agents):
+            plt.plot(data["rewards"][i], label=f'agent{i}')
+
         plt.xlabel("Episode")
         plt.ylabel("Reward")
+        plt.legend()
         plt.show()
 
     sys.exit(0)

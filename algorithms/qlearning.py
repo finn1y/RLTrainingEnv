@@ -3,7 +3,7 @@
 import numpy as np
 
 class QLearning():
-    def __init__(self, sizes, gamma=0.9, epsilon_max=0.8, epsilon_min=0.1, lr=0.7, lr_decay=0.95):
+    def __init__(self, sizes, gamma=0.99, epsilon_max=1.0, epsilon_min=0.01, lr=0.7, lr_decay=0.95):
         """
             function to initalise the QLearning class
 
@@ -30,11 +30,12 @@ class QLearning():
         self.epsilon_max = epsilon_max 
         self.epsilon_min = epsilon_min
         self.epsilon = epsilon_max
+        self.low = np.array(sizes[0][0], dtype=int)
         self.high = np.array(sizes[0][1], dtype=int)
         self.n_actions = np.shape(sizes[1])[1]
+        n_states = np.prod(self.high - self.low + 1) 
 
-        self.q_table = np.zeros((np.sum(self.high + 1), self.n_actions))
-        print(self.q_table)
+        self.q_table = np.zeros((n_states, self.n_actions))
 
     def get_parameters(self):
         """
@@ -78,26 +79,42 @@ class QLearning():
 
             n_max is the maximum number of epsiodes
         """
-        rate = max((n_max - n_t) / n_max, 0) #rate should not be less than zero
+        rate = max((n_max - (n_t + 1)) / n_max, 0) #rate should not be less than zero
         self.epsilon = rate * (self.epsilon_max - self.epsilon_min) + self.epsilon_min
 
-        self.lr *= self.lr_decay ** n_t
+        self.lr *= self.lr_decay ** (n_t + 1)
 
     def train(self, obv, action, reward, next_obv):
         """
-            function to train agent 
+            function to train agent by applying the q-value update rule to the q-table
+
+            obv is the observation from the environment
+
+            action is the action taken by the agent
+
+            reward is the reward provided by the environment after taking action in current state
+
+            next_obv is the observation after taking action in the current state
         """
         if np.size(self.high) > 1:
             obv = self.__index_obv__(obv)
             next_obv = self.__index_obv__(next_obv)
-        
-        self.q_table[obv, action] += self.lr * (reward + self.gamma * np.max(self.q_table[next_obv]) - self.q_table[obv, action])
+
+        action = int(action)
+
+        self.q_table[obv, action] += self.lr * (reward + (self.gamma * np.max(self.q_table[next_obv])) - self.q_table[obv, action])
 
     def __index_obv__(self, obv) -> int:
+        """
+            function to turn the observations from the environment into an index for the q-table (int)
+
+            returns the index as a int
+        """
         index_obv = 0
 
-        for i in range(np.size(self.high)):
-            offset = 0 if i == 0 else int(np.sum(self.high[:i - 1]))
-            index_obv += int(obv[i]) + offset
-        return index_obv
+        for i in range((np.size(obv) - 1), -1, -1):
+            scaler = (self.high[i + 1] + 1 - self.low[i + 1]) if i != (np.size(obv) - 1) else 1
+            index_obv += (obv[i] - self.low[i]) * scaler
+
+        return int(index_obv)
 

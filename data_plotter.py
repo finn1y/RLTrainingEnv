@@ -13,8 +13,8 @@ def get_args(envs, algorithms):
     """
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-e", "--environments", choices=envs, default=None, nargs="+", help="Environment data was gathered on")
-    parser.add_argument("-a", "--algorithms", choices=algorithms, default=None, nargs="+", help="RL Algorithm data was gathered using")
+    parser.add_argument("-e", "--environments", choices=envs, default=envs, nargs="+", help="Environment data was gathered on")
+    parser.add_argument("-a", "--algorithms", choices=algorithms, default=algorithms, nargs="+", help="RL Algorithm data was gathered using")
     parser.add_argument("-d", "--data-type", default="rewards", nargs="+", help="types of data to be plotted")
 
     return parser.parse_args()
@@ -25,8 +25,11 @@ def load_data(path):
 
         path is the path the pickel file
     """
-    with open(path, "rb") as handle:
-        data = pickle.load(handle)
+    if os.path.isfile(path):
+        with open(path, "rb") as handle:
+            data = pickle.load(handle)
+    else:
+        raise FileNotFoundError
 
     return data
 

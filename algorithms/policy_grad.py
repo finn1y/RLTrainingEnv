@@ -7,7 +7,7 @@ class PolicyGradient():
     """
         Class to contain the PolicyNetwork and all parameters
     """
-    def __init__(self, sizes, gamma=0.9, lr=0.1, lr_decay=0.9, lr_decay_steps=10000, saved_path=None):
+    def __init__(self, sizes, gamma=0.99, lr=0.0001, lr_decay=0.9, lr_decay_steps=10000, saved_path=None):
         """
             function to initialise the class
 
@@ -93,8 +93,8 @@ class PolicyGradient():
 
             returns the loss of the training as a tensor
         """
-        obv_batch = np.array([self.replay_mem[i]["obv"] for i in range(np.shape(self.replay_mem)[0])])
-        action_batch = np.array([self.replay_mem[i]["action"] for i in range(np.shape(self.replay_mem)[0])])
+        obv_batch = np.array([self.replay_mem[i]["obv"] for i in range(np.shape(self.replay_mem)[0])], dtype=np.float32)
+        action_batch = np.array([self.replay_mem[i]["action"] for i in range(np.shape(self.replay_mem)[0])], dtype=int)
         returns = []
         discounted_sum = 0
 
