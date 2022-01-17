@@ -110,6 +110,7 @@ class QLearning():
             obv = self.__index_obv__(obv)
             next_obv = self.__index_obv__(next_obv)
 
+        #ensure action is an int for indexing q-table
         action = int(action)
 
         self.q_table[obv, action] += self.lr * (reward + (self.gamma * np.max(self.q_table[next_obv])) - self.q_table[obv, action])
@@ -117,6 +118,8 @@ class QLearning():
     def __index_obv__(self, obv) -> int:
         """
             function to turn the observations from the environment into an index for the q-table (int)
+
+            obv is the observation to be indexed
 
             returns the index as a int
         """

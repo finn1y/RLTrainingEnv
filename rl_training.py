@@ -38,6 +38,31 @@ def get_args(envs, algorithms):
 def save_data(data, agent, env, algorithm):
     """
         function to save data in a pickle file gathered during training in the saved_data directory
+        saved_data directory has the following structure:
+
+            -saved_data
+                -CartPole-v1
+                    -qlearning
+                        -training1
+                            -data.pkl
+                            -q_table.pkl
+                    -dqn
+                        -training1
+                            -data.pkl
+                            -agent0
+                                -(saved tf model)
+                            -agent1
+                                -(saved tf model)
+                -maze-sample-5x5-v0
+                    -policy_gradient
+                        -training1
+                            -data.pkl
+                            -agent0
+                                -(saved tf model)
+                        -training2
+                            -data.pkl
+                            -agent0
+                                -(saved tf model)
 
         data is a dictionary of the data to be saved
 
@@ -64,20 +89,23 @@ def save_data(data, agent, env, algorithm):
     dir_name = f'training{number}'
     path = os.path.join(path, dir_name)
 
+    #make directory if not already exists
     if not os.path.isdir(path):
         os.makedirs(path)
 
+    #save parameters to pickle file
     with open(f'{path}/data.pkl', "wb") as handle:
         pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     if algorithm != "qlearning":
+        #save tf model
         for i in range(np.size(agents)):
             agents[i].save_model(f'{path}/agent{i}')
     else:
+        #save q-table in pickle file
         for i in range(np.size(agents)):
             with open(f'{path}/q_table{i}.pkl', "wb") as handle:
                 pickle.dump(agents[i].q_table, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            
 
 if __name__ == "__main__":
     #list of all possible environements
@@ -89,9 +117,10 @@ if __name__ == "__main__":
 
     args = get_args(envs, algorithms)
 
-    if args.Algorithm == "ddpg" and args.Environment in envs[:9]:
+    #check that chosen algorithm can be used with chosen environment action space
+    if args.Algorithm == "ddpg" and args.Environment in envs[:10]:
         raise Exception(f'DDPG can only be simulated with continuous action spaces: {envs[9:]}')
-    if args.Algorithm in algorithms[:5] and args.Environment in envs[9:]:
+    if args.Algorithm in algorithms[:5] and args.Environment in envs[10:]:
         raise Exception(f'{args.Algorithm} can only be simulated with discrete action spaces: {envs[:9]}')
 
     if args.Environment in envs[:6]:
@@ -117,10 +146,12 @@ if __name__ == "__main__":
 
     batch_size = args.batch_size
     
+    #create list of agent objects depending on the algorithm to be used
     if args.Algorithm == "qlearning":
         agents = [QLearning([observations, actions]) for i in range(args.agents)]
 
     if args.Algorithm in algorithms[1:3]:
+        #drqn is a deep q-network with a long short term memory replacing the first layer of the q-network 
         recurrent = True if args.Algorithm == "drqn" else False
         agents = [DQN([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps,  DRQN=recurrent, saved_path=args.model_path) for i in range(args.agents)]
 
@@ -133,7 +164,6 @@ if __name__ == "__main__":
     if args.Algorithm == "ddpg":
         agents = [DDPG([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path) for i in range(args.agents)]
     
-    successes = 0
     all_losses = []
     all_rewards = []
 
@@ -142,6 +172,11 @@ if __name__ == "__main__":
     
     for e in range(args.episodes):
         obvs = env.reset()
+        
+        if args.Environment in envs[7:]:
+            #environment not multi-agent compatible 
+            obvs = np.array([obvs]) #wrap obvs in arrays
+
         ep_losses = []
         total_rewards = np.zeros(args.agents)
         done = False
@@ -150,11 +185,18 @@ if __name__ == "__main__":
             if args.render:
                 env.render()
 
-            actions = np.zeros(args.agents)
+            actions = np.zeros(args.agents, dtype=int)
             for i in range(args.agents):
                 actions[i] = agents[i].get_action(obvs[i])
             
-            next_obvs, rewards, done, _ = env.step(actions)
+            if args.Environment in envs[:7]:
+                next_obvs, rewards, done, _ = env.step(actions)
+            else:
+                #environment not multi-agent compatible 
+                next_obvs, rewards, done, _ = env.step(actions[0])
+                #wrap next_obvs and rewards in arrays
+                next_obvs = np.array([next_obvs])
+                rewards = np.array([rewards])
 
             for i in range(args.agents):
                 if args.Algorithm == "qlearning":
@@ -181,9 +223,6 @@ if __name__ == "__main__":
             if done or t == (args.time_steps - 1):
                 print(f'Episode {e} finished after {t} time steps with total reward = {total_rewards}')
 
-                if done:
-                    successes += 1
-
                 if args.Algorithm in algorithms[:3]:
                     for i in range(args.agents):
                         agents[i].update_parameters(e, args.episodes)
@@ -204,13 +243,13 @@ if __name__ == "__main__":
             if args.Environment in envs[:6] and env.is_game_over():
                 sys.exit(0)
 
-    print(f'Training complete with {successes}/{args.episodes} episodes completed')
+    print(f'Training complete after {args.episodes} episodes')
 
-
-    data = {"Parameters": agents[0].get_parameters(), "rewards": all_rewards, "losses": all_losses, "successes": successes}
+    data = {"Parameters": agents[0].get_parameters(), "rewards": all_rewards, "losses": all_losses}
     save_data(data, agents, args.Environment, args.Algorithm)
 
     if args.plot:
+        #plot rewards against episode for each agent
         for i in range(args.agents):
             agent_reward = [data["rewards"][j][i] for j in range(np.shape(data["rewards"])[0])]
             plt.plot(agent_reward, label=f'agent{i}')
