@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
+import os, pickle
+
 import numpy as np
 
 class QLearning():
-    def __init__(self, sizes, gamma=0.99, epsilon_max=1.0, epsilon_min=0.01, lr=0.7, lr_decay=0.95):
+    def __init__(self, sizes, gamma=0.99, epsilon_max=1.0, epsilon_min=0.01, lr=0.7, lr_decay=0.95, saved_path=None):
         """
             function to initalise the QLearning class
 
@@ -36,6 +38,14 @@ class QLearning():
         n_states = np.prod(self.high - self.low + 1) 
 
         self.q_table = np.zeros((n_states, self.n_actions))
+
+        #load a saved model (q-table) if provided
+        if saved_path:
+            if os.path.isfile(saved_path):
+                with open(saved_path, "rb") as handle:
+                    self.q_table = pickle.load(handle)
+            else:
+                raise FileNotFoundError
 
     def get_parameters(self):
         """

@@ -48,12 +48,15 @@ if __name__ == "__main__":
 
         if os.path.isdir(a_path):
             dir_list = os.listdir(a_path)
-    
-            for file_name in dir_list:
-                if "data" in file_name:
-                    number = int(file_name[-5])
-                    data = load_data(f'{a_path}/{file_name}')
-                    plt.plot(data[f'{args.data_type}'], label=f'{a}{number}')
+
+            for dir_name in dir_list:
+                if "training" in dir_name:
+                    number = int(dir_name[-1])
+                    data = load_data(f'{a_path}/{dir_name}/data.pkl')
+
+                    for i in range(len(data[f'{args.data_type}'][0])):
+                        agent_reward = [data[f'{args.data_type}'][j][i] for j in range(len(data[f'{args.data_type}']))]
+                        plt.plot(agent_reward, label=f'{a}{number}_agent{i}')
 
     plt.xlabel("Episode")
     plt.ylabel("Reward")

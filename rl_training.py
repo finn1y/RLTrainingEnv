@@ -58,17 +58,26 @@ def save_data(data, agent, env, algorithm):
 
     #number data files incrementally to prevent overwriting old data
     for file_name in dir_list:
-        if "data" in file_name:
-            number = int(file_name[-5]) + 1
+        if "training" in file_name:
+            number = int(file_name[-1]) + 1
 
-    with open(f'{path}/data{number}.pkl', "wb") as handle:
+    dir_name = f'training{number}'
+    path = os.path.join(path, dir_name)
+
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+    with open(f'{path}/data.pkl', "wb") as handle:
         pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     if algorithm != "qlearning":
-        os.makedirs(f'{path}/models')
-
         for i in range(np.size(agents)):
-            agents[i].save_model(f'{path}/models/agent{number}')
+            agents[i].save_model(f'{path}/agent{i}')
+    else:
+        for i in range(np.size(agents)):
+            with open(f'{path}/q_table{i}.pkl', "wb") as handle:
+                pickle.dump(agents[i].q_table, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            
 
 if __name__ == "__main__":
     #list of all possible environements
@@ -203,7 +212,8 @@ if __name__ == "__main__":
 
     if args.plot:
         for i in range(args.agents):
-            plt.plot(data["rewards"][i], label=f'agent{i}')
+            agent_reward = [data["rewards"][j][i] for j in range(np.shape(data["rewards"])[0])]
+            plt.plot(agent_reward, label=f'agent{i}')
 
         plt.xlabel("Episode")
         plt.ylabel("Reward")
