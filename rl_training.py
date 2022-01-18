@@ -8,11 +8,15 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
+#single-agent algorithms (can be used as independent multi-agent algorithms)
 from algorithms.qlearning import QLearning
 from algorithms.dqn import DQN
 from algorithms.policy_grad import PolicyGradient
 from algorithms.actor_critic import ActorCritic
 from algorithms.ddpg import DDPG
+
+#multi-agent algorithms
+from algorithms.ddrqn import DDRQN
 
 def get_args(envs, algorithms):
     """
@@ -113,7 +117,8 @@ if __name__ == "__main__":
             "maze-sample-5x5-v0", "maze-sample-10x10-v0", "maze-sample-100x100-v0", "gym_robot_maze:robot-maze-v0", 
             "CartPole-v1", "Acrobot-v1", "MountainCar-v0", "MountainCarContinuous-v0", "Pendulum-v1"]
     #list of all possible algorithms
-    algorithms = ["qlearning", "dqn", "drqn", "policy_gradient", "actor_critic", "ddpg"]
+    #algorithms[:6] are single-agent algorithms (can be used as independent multi-agent algorithms), algorithms[6:] are multi-agent algorithms
+    algorithms = ["qlearning", "dqn", "drqn", "policy_gradient", "actor_critic", "ddpg", "ddrqn"]
 
     args = get_args(envs, algorithms)
 
@@ -123,10 +128,14 @@ if __name__ == "__main__":
     if args.Algorithm in algorithms[:5] and args.Environment in envs[10:]:
         raise Exception(f'{args.Algorithm} can only be simulated with discrete action spaces: {envs[:9]}')
 
+    #check that multi-agent algorithms have multiple agents
+    if args.Algorithm in algorithms[6:] and args.agents < 2:
+        raise Exception(f'{args.Algorithm} is a multi-agent algorithm and must have >1 agents')
+
     if args.Environment in envs[:6]:
         env = gym.make(args.Environment, enable_render=args.render, n_robots=args.agents)
     elif args.Environment in envs[6:7]:
-        env = gym.make(args.Environment, is_render=args.render)
+        env = gym.make(args.Environment, is_render=args.render, n_agents=args.agents)
     else:
         env = gym.make(args.Environment)
 
@@ -164,6 +173,9 @@ if __name__ == "__main__":
     if args.Algorithm == "ddpg":
         agents = [DDPG([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path) for i in range(args.agents)]
     
+    if args.Algorithm == "ddrqn":
+        agents = [DDRQN([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path) for i in range(args.agents)]
+
     all_losses = []
     all_rewards = []
 
@@ -175,7 +187,7 @@ if __name__ == "__main__":
         
         if args.Environment in envs[7:]:
             #environment not multi-agent compatible 
-            obvs = np.array([obvs]) #wrap obvs in arrays
+            obvs = np.array([obvs]) #wrap obvs in array
 
         ep_losses = []
         total_rewards = np.zeros(args.agents)
@@ -199,11 +211,14 @@ if __name__ == "__main__":
                 rewards = np.array([rewards])
 
             for i in range(args.agents):
-                if args.Algorithm == "qlearning":
+                if args.Algorithm == "qlearning" or args.Algorithm == "ddrqn":
                     agents[i].train(obvs[i], actions[i], rewards[i], next_obvs[i])
                 
                 if args.Algorithm in algorithms[1:6]:
                     agents[i].store_step(obvs[i], actions[i], rewards[i], next_obvs[i])
+
+            if args.Algorithm == "ddrqn":
+                agents[0].communicate(agents[1:])
 
             obvs = next_obvs
             total_rewards += rewards
@@ -221,7 +236,12 @@ if __name__ == "__main__":
                 ep_losses.append(loss)
                 
             if done or t == (args.time_steps - 1):
-                print(f'Episode {e} finished after {t} time steps with total reward = {total_rewards}')
+                reward_str = f'Episode {e} finished after {t} time steps with:'
+                
+                for i in range(args.agents):
+                    reward_str += f' agent {i} reward = {total_rewards[i]},'
+
+                print(reward_str)
 
                 if args.Algorithm in algorithms[:3]:
                     for i in range(args.agents):
