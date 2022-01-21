@@ -3,6 +3,7 @@
 import sys, os
 import argparse, pickle
 
+import numpy as np
 import matplotlib.pyplot as plt
 
 def get_args(envs, algorithms):
@@ -39,7 +40,7 @@ if __name__ == "__main__":
             "maze-sample-5x5-v0", "maze-sample-10x10-v0", "maze-sample-100x100-v0", "gym_robot_maze:robot-maze-v0", 
             "CartPole-v1", "Acrobot-v1", "MountainCar-v0", "MountainCarContinuous-v0", "Pendulum-v1"]
     #list of all possible algorithms
-    algorithms = ["qlearning", "dqn", "drqn", "policy_gradient", "actor_critic", "ddpg"]
+    algorithms = ["qlearning", "dqn", "drqn", "policy_gradient", "actor_critic", "ddpg", "ma_actor_critic"]
 
     args = get_args(envs, algorithms)
 
@@ -54,9 +55,8 @@ if __name__ == "__main__":
                     number = int(dir_name[-1])
                     data = load_data(f'{a_path}/{dir_name}/data.pkl')
 
-                    for i in range(len(data[f'{args.data_type}'][0])):
-                        agent_reward = [data[f'{args.data_type}'][j][i] for j in range(len(data[f'{args.data_type}']))]
-                        plt.plot(agent_reward, label=f'{a}{number}_agent{i}')
+                    avg_reward = [np.average(data[f'{args.data_type}'][i]) for i in range(len(data[f'{args.data_type}']))]
+                    plt.plot(avg_reward, label=f'{a}{number}')
 
     plt.xlabel("Episode")
     plt.ylabel("Reward")

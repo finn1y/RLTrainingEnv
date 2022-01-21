@@ -286,14 +286,11 @@ if __name__ == "__main__":
     save_data(data, agents, args.Environment, args.Algorithm)
 
     if args.plot:
-        #plot rewards against episode for each agent
-        for i in range(args.agents):
-            agent_reward = [data["rewards"][j][i] for j in range(np.shape(data["rewards"])[0])]
-            plt.plot(agent_reward, label=f'agent{i}')
-
+        #plot average reward against episode
+        avg_reward = [np.average(data["rewards"][i]) for i in range(np.shape(data["rewards"])[0])]
+        plt.plot(avg_reward)
         plt.xlabel("Episode")
-        plt.ylabel("Reward")
-        plt.legend()
+        plt.ylabel("Avg. Reward")
         plt.show()
 
     sys.exit(0)
