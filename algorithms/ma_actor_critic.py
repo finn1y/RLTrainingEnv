@@ -55,8 +55,10 @@ class MAActorCritic():
 
         #load a saved model (neural net) if provided
         if saved_path:
-            self.actor_net = tf.keras.models.load_model(saved_path, custom_object={"CustomModel": ActorNet})
-            self.critic_net = tf.keras.models.load_model(saved_path, custom_object={"CustomModel": CriticNet})
+            self.actor_net = tf.keras.models.load_model(f'{saved_path}/actor', custom_object={"CustomModel": ActorNet})
+
+            if self.master:
+                self.critic_net = tf.keras.models.load_model(f'{saved_path}/critic', custom_object={"CustomModel": CriticNet})
 
     def get_parameters(self):
         """
@@ -72,10 +74,10 @@ class MAActorCritic():
 
             path is a string of the path to the file where the model will be saved
         """
-        self.actor_net.save(path)
+        self.actor_net.save(f'{path}/actor')
 
         if self.master:
-            self.critic_net.save(path)
+            self.critic_net.save(f'{path}/critic')
 
     def get_action(self, obv):
         """

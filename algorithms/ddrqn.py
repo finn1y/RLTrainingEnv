@@ -9,7 +9,7 @@ class DDRQN(DQN):
     """
         Class to contain the QNetwork and all parameters
     """
-    def __init__(self, sizes, gamma=0.99, epsilon_max=1.0, epsilon_min=0.01, lr=0.0001, lr_decay=0.9, lr_decay_steps=10000, saved_path=None):
+    def __init__(self, sizes, gamma=0.99, epsilon_max=1.0, epsilon_min=0.01, lr=0.0001, lr_decay=0.9, lr_decay_steps=10000, n_agents=2, saved_path=None):
         """
             function to initialise the class
 
@@ -30,6 +30,8 @@ class DDRQN(DQN):
 
             lr_decay_steps is an int which is the number of time steps to decay the learning rate
 
+            n_agents is an int which is the number of agents in the environment
+
             saved_path is a string of the path to the saved Q-network if on is being loaded
         """
         #provide previous action as an input as well as observation
@@ -37,13 +39,17 @@ class DDRQN(DQN):
         axes = np.size(np.shape(sizes[0])) - 1
         ones_shape = [np.shape(sizes[0])[i] for i in range(axes)]
         ones_shape.append(1)
+        print(sizes[0])
 
         #add one to the number of observations for building neural net
         sizes[0] = np.concatenate((sizes[0], np.ones(ones_shape)), axis=axes)
+        print(sizes[0])
 
         super(DDRQN, self).__init__(sizes, gamma, epsilon_max, epsilon_min, lr, lr_decay, lr_decay_steps, True, saved_path)
-        #init previous action to random action
+        #init agent actions to random action
         self.prev_action = np.random.choice(self.n_actions)
+        self.agent_actions = [np.random.choice(self.n_actions) for i in range(n_agents - 1)]
+        self.n_agents = n_agents
 
     def get_parameters(self):
         """
@@ -62,8 +68,8 @@ class DDRQN(DQN):
 
             returns the action to take
         """
-        #feed previous action to the q-net alongside observations
-        obv = np.concatenate((obv, [self.prev_action]), axis=0)
+        #feed other agent actions to the q-net alongside observations
+        obv = np.concatenate((obv, self.prev_action), axis=0)
 
         #take random action with probability epsilon (explore rate)
         if np.random.uniform(0, 1) < self.epsilon:
@@ -95,10 +101,10 @@ class DDRQN(DQN):
 
             next_obv is the observation after taking action in the current state
         """
-        #feed previous action to the q-net alongside observations
-        obv = np.concatenate((obv, [self.prev_action]), axis=0)
+        #feed other agent actions to the q-net alongside observations
+        obv = np.concatenate((obv, self.prev_action), axis=0)
         #previous action is current action for next observation
-        next_obv = np.concatenate((next_obv, [action]), axis=0)
+        next_obv = np.concatenate((next_obv, action), axis=0)
 
         target = self.target_net(np.array([next_obv]))
         #calculate expected reward
@@ -123,13 +129,20 @@ class DDRQN(DQN):
 
         return loss
 
-    def communicate(self, other_agents):
+    def send_comm(self, comm):
         """
             function to communicate with other agents
     
             other_agents is an array of other agents in the environments
         """
-        for agent in other_agents:
-            agent.q_net.set_weights(self.q_net.get_weights())            
+        return comm
+
+    def recieve_comm(self, comm):
+        """
+            function to communicate with other agents
+    
+            other_agents is an array of other agents in the environments
+        """
+        self.agent_actions = np.concatenate((self.agent_actions, [comm]), axis=0)
 
 
