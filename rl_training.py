@@ -17,6 +17,7 @@ from algorithms.ddpg import DDPG
 
 #multi-agent algorithms
 from algorithms.ddrqn import DDRQN
+from algorithms.ma_actor_critic import MAActorCritic
 
 def get_args(envs, algorithms):
     """
@@ -118,7 +119,7 @@ if __name__ == "__main__":
             "CartPole-v1", "Acrobot-v1", "MountainCar-v0", "MountainCarContinuous-v0", "Pendulum-v1"]
     #list of all possible algorithms
     #algorithms[:6] are single-agent algorithms (can be used as independent multi-agent algorithms), algorithms[6:] are multi-agent algorithms
-    algorithms = ["qlearning", "dqn", "drqn", "policy_gradient", "actor_critic", "ddpg", "ddrqn"]
+    algorithms = ["qlearning", "dqn", "drqn", "policy_gradient", "actor_critic", "ddpg", "ddrqn", "ma_actor_critic"]
 
     args = get_args(envs, algorithms)
 
@@ -176,6 +177,11 @@ if __name__ == "__main__":
     if args.Algorithm == "ddrqn":
         agents = [DDRQN([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, saved_path=args.model_path) for i in range(args.agents)]
 
+    if args.Algorithm == "ma_actor_critic":
+        agents = [MAActorCritic([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, n_agents=args.agents, saved_path=args.model_path) for i in range(args.agents - 1)]
+        #agent 0 is the master the rest are slaves
+        agents.insert(0, MAActorCritic([observations, args.hidden_size, actions], lr_decay_steps=args.time_steps, n_agents=args.agents, master=True, saved_path=args.model_path))
+
     all_losses = []
     all_rewards = []
 
@@ -214,11 +220,13 @@ if __name__ == "__main__":
                 if args.Algorithm == "qlearning" or args.Algorithm == "ddrqn":
                     agents[i].train(obvs[i], actions[i], rewards[i], next_obvs[i])
                 
-                if args.Algorithm in algorithms[1:6]:
+                if args.Algorithm in algorithms[1:6] or args.Algorithm in algorithms[7:8]:
                     agents[i].store_step(obvs[i], actions[i], rewards[i], next_obvs[i])
 
-            if args.Algorithm == "ddrqn":
-                agents[0].communicate(agents[1:])
+            if args.Algorithm in algorithms[6:]:
+                for i in range(1, args.agents):
+                    agents[0].receive_comm(agents[i].send_comm())
+                #agents[0].communicate(agents[1:])
 
             obvs = next_obvs
             total_rewards += rewards
@@ -236,12 +244,7 @@ if __name__ == "__main__":
                 ep_losses.append(loss)
                 
             if done or t == (args.time_steps - 1):
-                reward_str = f'Episode {e} finished after {t} time steps with:'
-                
-                for i in range(args.agents):
-                    reward_str += f' agent {i} reward = {total_rewards[i]},'
-
-                print(reward_str)
+                print(f'Episode {e} finished after {t} time steps with total rewards = {total_rewards},')
 
                 if args.Algorithm in algorithms[:3]:
                     for i in range(args.agents):
@@ -255,6 +258,20 @@ if __name__ == "__main__":
                         losses.append(loss)
 
                     ep_losses.append(losses)
+
+                if args.Algorithm in algorithms[7:8]:
+                    losses = []
+
+                    loss = agents[0].train()
+                    losses.append(loss)
+
+                    for i in range(1, args.agents):
+                        agents[i].receive_comm(agents[0].send_comm())
+
+                        loss = agents[i].train()
+                        losses.append(loss)
+
+                    ep_losses.append(loss)
 
                 all_rewards.append(total_rewards)
                 all_losses.append(ep_losses)

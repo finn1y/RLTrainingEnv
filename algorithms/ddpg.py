@@ -65,7 +65,8 @@ class DDPG():
 
             path is a string of the path to the file where the model will be saved
         """
-        self.ddpg_net.save(path)
+        self.actor_net.save(path)
+        self.critic_net.save(path)
 
     def get_action(self, obv):
         """
