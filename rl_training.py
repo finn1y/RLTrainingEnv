@@ -219,14 +219,22 @@ if __name__ == "__main__":
             for i in range(args.agents):
                 if args.Algorithm == "qlearning" or args.Algorithm == "ddrqn":
                     agents[i].train(obvs[i], actions[i], rewards[i], next_obvs[i])
-                
+
+                    if args.Algorithm == "ddrqn":
+                        #each agent sends their updated weights to the next agent for the next update
+                        j = (i + 1) % (args.agents - 1)
+                        agents[j].receive_comm(agents[i].send_comm())
+
                 if args.Algorithm in algorithms[1:6] or args.Algorithm in algorithms[7:8]:
                     agents[i].store_step(obvs[i], actions[i], rewards[i], next_obvs[i])
 
             if args.Algorithm in algorithms[6:]:
                 for i in range(1, args.agents):
-                    agents[0].receive_comm(agents[i].send_comm())
-                #agents[0].communicate(agents[1:])
+                    if args.Algorithm == "ma_actor_critic":
+                        agents[0].receive_comm(agents[i].send_comm())
+
+                    if args.Algorithm == "ddrqn":
+                        agents[i].receive_comm(agents[0].send_comm())
 
             obvs = next_obvs
             total_rewards += rewards
