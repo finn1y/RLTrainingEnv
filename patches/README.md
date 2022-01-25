@@ -20,6 +20,7 @@ To view what the patch changes either by looking in the `.patch` file or by usin
 
 ##### 1. `gym_maze_multi_agent.patch`
 
-    Converts the gym-maze environment created by "MattChanTK" into a multi-agent environment by taking in arrays of actions, processing actions for each robot and outputting the rewards and states as arrays
+    Converts the gym-maze environment created by "MattChanTK" into a multi-agent environment by taking in arrays of actions, 
+    processing actions for each robot and outputting the rewards and states as arrays
 
 
