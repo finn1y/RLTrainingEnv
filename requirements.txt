@@ -1,6 +1,6 @@
 cloudpickle==2.0.0
 gym==0.21.0
--e git+https://github.com/MattChanTK/gym-maze.git@dd387df404aa00531c5b612bcd4e7eb04f041a5a#egg=gym_maze
+-e ../gym-maze
 -e git+ssh://git@github.com/finn1y/gym-robot-maze.git@4006f0df820d98f52f505a1a40600c4c16fe10e2#egg=gym_robot_maze
 keras==2.7.0
 Keras-Preprocessing==1.1.2
