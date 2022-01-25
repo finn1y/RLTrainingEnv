@@ -7,21 +7,21 @@ A training environment for reinforcement learning algorithms using [open-ai gym]
 Both single agent and multi-agent reinforcement learning algorithms are included within the learning environment
 Any single agent algorithm can be used as an independent multi-agent learning algorithm with the multi-agent environments
 
-#### Q-Learning
+#### [Q-Learning](algorithms/qlearning.py)
 
-#### Deep Q-Network (DQN)
+#### [Deep Q-Network](algorithms/dqn.py) (DQN)
 
-#### Deep Recurrent Q-Network (DRQN)
+#### [Deep Recurrent Q-Network](algorithms/dqn.py) (DRQN)
 
-#### Policy Gradient (PG)
+#### [Policy Gradient](algorihms/policy_grad.py) (PG)
 
-#### Advantage Actor Critic (A2C)
+#### [Advantage Actor Critic](algorithms/actor_critic.py) (A2C)
 
-#### Deep Deterministic Policy Gradient (DDPG)
+#### [Deep Deterministic Policy Gradient](algorithms/ddpg.py) (DDPG)
 
-#### Multi-agent Actor Critic (MA Actor Critic)
+#### [Multi-agent Actor Critic](algorithms/ma_actor_critic.py) (MA Actor Critic)
 
-#### Distributed Deep Recurrent Q-Network (DDRQN)
+#### [Distributed Deep Recurrent Q-Network](algorithms/ddrqn.py) (DDRQN)
 
 ## Included Environments
 
@@ -44,15 +44,21 @@ environments which have both single agent and multi-agent variations
 
 ## Install
 
-1. Clone the repo:
+1. Clone the repo
 ```
 git clone https://github.com/finn1y/RLTraingingEnv
 ```
-2. Install dependencies
+2. Clone dependencies from github
 ```
-
+git clone https://github.com/finn1y/gym-robot-maze
+git clone https://github.com/MattChanTK/gym-maze
 ```
 3. Apply dependency patches, described in [patches](patches/README.md)
-4. Enjoy training some RL agents!
+4. Install python dependencies in repo
+```
+cd RLTrainingEnv
+pip install -r requirements.txt
+```
+5. Enjoy training some RL agents!
 
 
