@@ -1,4 +1,4 @@
-# Reinforcement Learning (RL) Trainging Environment
+# Reinforcement Learning (RL) Training Environment
 
 A training environment for reinforcement learning algorithms using [open-ai gym](https://gym.openai.com/), as first suggested by Brockman et al in [[1]](#1)
 
