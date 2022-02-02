@@ -55,17 +55,32 @@ environments which have both single agent and multi-agent variations
 
 #### [Maze](https://github.com/MattChanTK/gym-maze)
 
+A simple openai gym maze environment written by GitHub user 'MattChanTK' in [[11]](#11). A [patch](patches/gym_maze_multi_agent.patch)
+which adds multi-agent functionality to the environment has been included in this repository for this environment.
+
 #### [Robot Maze](https://github.com/finn1y/gym-robot-maze)
+
+An openai gym maze envrionment written by GitHub user 'finn1y' in [[12]](#12).  
 
 #### [Cart Pole](https://gym.openai.com/envs/CartPole-v1/)
 
+An openai gym environment shipped with openai gym under classic control environments
+
 #### [Acrobot](https://gym.openai.com/envs/Acrobot-v1/)
+
+An openai gym environment shipped with openai gym under classic control environments
 
 #### [Mountain Car](https://gym.openai.com/envs/MountainCar-v0/)
 
+An openai gym environment shipped with openai gym under classic control environments
+
 #### [Mountain Car Continuous](https://gym.openai.com/envs/MountainCarContinuous-v0/)
 
+An openai gym environment shipped with openai gym under classic control environments
+
 #### [Pendulum](https://gym.openai.com/envs/Pendulum-v0/)
+
+An openai gym environment shipped with openai gym under classic control environments
 
 ## Install
 
@@ -127,5 +142,8 @@ R. Lowe, Y. Wu, A. Tamar et al, “Multi-Agent Actor-Critic for Mixed Cooperativ
 J.N. Foerster, Y.M. Assael, N. de Freitas et al, “Learning to Communicate with Deep Multi-Agent Reinforcement Learning”, 
 *arXiv:1605.06676v2 [cs.AI]*, 2016. Available: [link](https://arxiv.org/abs/1605.06676v2) [Accessed 2 Feb 2022]
 
+<a id="11">[11]</a>
+M. Chan, "gym-maze", *GitHub*, 2020. Available: [here](https://github.com/MattChanTK/gym-maze) [Accessed 2 Feb 2022]
 
-
+<a id="12">[12]</a>
+F. Middleton-Baird, "gym-robot-maze", *GitHub*, 2021. Available: [here](https://github.com/finn1y/gym-robot-maze) [Accessed 2 Feb 2022]
