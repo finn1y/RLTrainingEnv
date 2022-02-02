@@ -1,4 +1,4 @@
-# Reinfrcement Learning (RL) Trainging Environment
+# Reinforcement Learning (RL) Trainging Environment
 
 A training environment for reinforcement learning algorithms using [open-ai gym](https://gym.openai.com/), as first suggested by Brockman et al in [[1]](#1)
 
@@ -143,7 +143,7 @@ J.N. Foerster, Y.M. Assael, N. de Freitas et al, “Learning to Communicate with
 *arXiv:1605.06676v2 [cs.AI]*, 2016. Available: [link](https://arxiv.org/abs/1605.06676v2) [Accessed 2 Feb 2022]
 
 <a id="11">[11]</a>
-M. Chan, "gym-maze", *GitHub*, 2020. Available: [here](https://github.com/MattChanTK/gym-maze) [Accessed 2 Feb 2022]
+M. Chan, "gym-maze", *GitHub*, 2020. Available: [link](https://github.com/MattChanTK/gym-maze) [Accessed 2 Feb 2022]
 
 <a id="12">[12]</a>
-F. Middleton-Baird, "gym-robot-maze", *GitHub*, 2021. Available: [here](https://github.com/finn1y/gym-robot-maze) [Accessed 2 Feb 2022]
+F. Middleton-Baird, "gym-robot-maze", *GitHub*, 2021. Available: [link](https://github.com/finn1y/gym-robot-maze) [Accessed 2 Feb 2022]
