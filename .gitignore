@@ -29,4 +29,6 @@ MANIFEST
 
 # Generated files
 saved_data/
-
+logs/
+*log.txt
+*logs.txt

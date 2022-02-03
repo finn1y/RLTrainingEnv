@@ -37,6 +37,7 @@ def get_args(envs, algorithms):
     parser.add_argument("-s", "--hidden-size", type=int, default=128, help="Number of neurons in the hidden layer of neural nets")
     parser.add_argument("-p", "--plot", action="store_true", help="Flag to plot data after completion")
     parser.add_argument("-a", "--agents", type=int, default=1, help="Number of agents")
+    parser.add_argument("-d", "--save-data", action="store_true", help="Flag to save the results from the training")
 
     return parser.parse_args()
 
@@ -291,7 +292,9 @@ if __name__ == "__main__":
     print(f'Training complete after {args.episodes} episodes')
 
     data = {"Parameters": agents[0].get_parameters(), "rewards": all_rewards, "losses": all_losses}
-    save_data(data, agents, args.Environment, args.Algorithm)
+    
+    if args.save_data:
+        save_data(data, agents, args.Environment, args.Algorithm)
 
     if args.plot:
         #plot average reward against episode

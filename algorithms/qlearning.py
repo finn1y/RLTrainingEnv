@@ -107,8 +107,11 @@ class QLearning():
             next_obv is the observation after taking action in the current state
         """
         if np.size(self.high) > 1:
-            obv = self.__index_obv__(obv)
-            next_obv = self.__index_obv__(next_obv)
+            obv = self.__index_obv__(np.array(obv, dtype=int))
+            next_obv = self.__index_obv__(np.array(next_obv, dtype=int))
+        else:
+            obv = int(obv)
+            next_obv = int(next_obv)
 
         #ensure action is an int for indexing q-table
         action = int(action)
@@ -129,5 +132,5 @@ class QLearning():
             scaler = (self.high[i + 1] + 1 - self.low[i + 1]) if i != (np.size(obv) - 1) else 1
             index_obv += (obv[i] - self.low[i]) * scaler
 
-        return int(index_obv)
+        return index_obv
 
