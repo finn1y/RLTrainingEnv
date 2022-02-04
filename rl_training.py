@@ -37,38 +37,29 @@ def get_args(envs, algorithms):
     parser.add_argument("-s", "--hidden-size", type=int, default=128, help="Number of neurons in the hidden layer of neural nets")
     parser.add_argument("-p", "--plot", action="store_true", help="Flag to plot data after completion")
     parser.add_argument("-a", "--agents", type=int, default=1, help="Number of agents")
-    parser.add_argument("-d", "--save-data", action="store_true", help="Flag to save the results from the training")
+    parser.add_argument("-d", "--directory", type=str, default=None, help="Save the results from the training to the specified directory")
 
     return parser.parse_args()
 
-def save_data(data, agent, env, algorithm):
+def save_data(path, data, agent, env, algorithm):
     """
-        function to save data in a pickle file gathered during training in the saved_data directory
-        saved_data directory has the following structure:
+        function to save data in a pickle file gathered during training in the directory at path
+        directory has the following structure, for q-learning:
 
-            -saved_data
-                -CartPole-v1
-                    -qlearning
-                        -training1
-                            -data.pkl
-                            -q_table.pkl
-                    -dqn
-                        -training1
-                            -data.pkl
-                            -agent0
-                                -(saved tf model)
-                            -agent1
-                                -(saved tf model)
-                -maze-sample-5x5-v0
-                    -policy_gradient
-                        -training1
-                            -data.pkl
-                            -agent0
-                                -(saved tf model)
-                        -training2
-                            -data.pkl
-                            -agent0
-                                -(saved tf model)
+            -path
+                -data.pkl
+                -q_table.pkl
+
+        or for any other algorithm:
+
+            -path
+                -data.pkl
+                -agent0
+                    -(saved tf model)
+                -agent1
+                    -(saved tf model)
+
+        path is a string of the path to the directory to store the data in
 
         data is a dictionary of the data to be saved
 
@@ -78,22 +69,7 @@ def save_data(data, agent, env, algorithm):
 
         algorithm is the name of the RL algorithm used to gather the data
     """
-    path = os.path.join(os.getcwd(), "saved_data", env, algorithm)
-
-    #make directory if not already exists
-    if not os.path.isdir(path):
-        os.makedirs(path)
-
-    dir_list = os.listdir(path)
-    number = 1
-
-    #number data files incrementally to prevent overwriting old data
-    for file_name in dir_list:
-        if "training" in file_name:
-            number = int(file_name[-1]) + 1
-
-    dir_name = f'training{number}'
-    path = os.path.join(path, dir_name)
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
 
     #make directory if not already exists
     if not os.path.isdir(path):
@@ -293,11 +269,11 @@ if __name__ == "__main__":
 
     data = {"Parameters": agents[0].get_parameters(), "rewards": all_rewards, "losses": all_losses}
     
-    if args.save_data:
-        save_data(data, agents, args.Environment, args.Algorithm)
+    if args.directory:
+        save_data(args.directory, data, agents, args.Environment, args.Algorithm)
 
     if args.plot:
-        #plot average reward against episode
+        #plot average reward of agents against episode
         avg_reward = [np.average(data["rewards"][i]) for i in range(np.shape(data["rewards"])[0])]
         plt.plot(avg_reward)
         plt.xlabel("Episode")
