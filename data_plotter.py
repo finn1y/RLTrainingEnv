@@ -14,9 +14,8 @@ def get_args(envs, algorithms):
     """
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-e", "--environments", choices=envs, default=envs, nargs="+", help="Environment data was gathered on")
-    parser.add_argument("-a", "--algorithms", choices=algorithms, default=algorithms, nargs="+", help="RL Algorithm data was gathered using")
-    parser.add_argument("-d", "--data-type", default="rewards", nargs="+", help="types of data to be plotted")
+    parser.add_argument("directory", type=str, nargs='+', help="path to directory where training data is saved")
+    parser.add_argument("-d", "--data-type", default="rewards", nargs="+", help="type of data to be plotted")
 
     return parser.parse_args()
 
@@ -35,28 +34,16 @@ def load_data(path):
     return data
 
 if __name__ == "__main__":
-    #list of all possible environements
-    envs = ["maze-random-5x5-v0", "maze-random-10x10-v0", "maze-random-100x100-v0", 
-            "maze-sample-5x5-v0", "maze-sample-10x10-v0", "maze-sample-100x100-v0", "gym_robot_maze:robot-maze-v0", 
-            "CartPole-v1", "Acrobot-v1", "MountainCar-v0", "MountainCarContinuous-v0", "Pendulum-v1"]
-    #list of all possible algorithms
-    algorithms = ["qlearning", "dqn", "drqn", "policy_gradient", "actor_critic", "ddpg", "ma_actor_critic"]
+    args = get_args()
 
-    args = get_args(envs, algorithms)
+    for directory in args.directory:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), directory)
 
-    for a in args.algorithms:
-        a_path = os.path.join(os.getcwd(), "saved_data", args.environments[0], a)
+        if os.path.isdir(path):
+            data = load_data(f'{path}/data.pkl')
 
-        if os.path.isdir(a_path):
-            dir_list = os.listdir(a_path)
-
-            for dir_name in dir_list:
-                if "training" in dir_name:
-                    number = int(dir_name[-1])
-                    data = load_data(f'{a_path}/{dir_name}/data.pkl')
-
-                    avg_reward = [np.average(data[f'{args.data_type}'][i]) for i in range(len(data[f'{args.data_type}']))]
-                    plt.plot(avg_reward, label=f'{a}{number}')
+            avg_data = [np.average(data[f'{args.data_type}'][i]) for i in range(len(data[f'{args.data_type}']))]
+            plt.plot(avg_data, label=f'{os.path.basename(directory)}')
 
     plt.xlabel("Episode")
     plt.ylabel("Reward")
