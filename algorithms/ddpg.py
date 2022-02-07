@@ -118,7 +118,7 @@ class DDPG():
 
         #samples of each piece of data from a random step in replay memory
         obv_batch = np.array([self.replay_mem[i]["obv"] for i in indices], dtype=np.float32)
-        action_batch = np.array([self.replay_mem[i]["action"] for i in indices])
+        action_batch = np.array([[self.replay_mem[i]["action"]] for i in indices], dtype=np.float32)
         reward_batch = np.array([self.replay_mem[i]["reward"] for i in indices], dtype=np.float32)
         next_obv_batch = np.array([self.replay_mem[i]["next_obv"] for i in indices], dtype=np.float32)
 

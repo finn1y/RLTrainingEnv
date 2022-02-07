@@ -79,6 +79,7 @@ def save_data(path, data, agent, env, algorithm):
     with open(f'{path}/data.pkl', "wb") as handle:
         pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+    #model (or q-table) saved for continuation of training if desired
     if algorithm != "qlearning":
         #save tf model
         for i in range(np.size(agents)):
@@ -180,12 +181,25 @@ if __name__ == "__main__":
             if args.render:
                 env.render()
 
-            actions = np.zeros(args.agents, dtype=int)
+            if args.Algorithm == "ddpg":
+                #continuous action space requires float type actions
+                actions = np.zeros(args.agents, dtype=np.float32)
+            else:
+                #dicrete action space requires int type actions
+                actions = np.zeros(args.agents, dtype=int)
+
             for i in range(args.agents):
                 actions[i] = agents[i].get_action(obvs[i])
             
-            if args.Environment in envs[:7]:
+            if args.Environment in envs[:7] or args.Environment in envs[10:12]:
+                #continuous action envs require action in an array
                 next_obvs, rewards, done, _ = env.step(actions)
+
+                if args.Environment in envs[10:12]:
+                    #wrap next_obvs and rewards in arrays
+                    next_obvs = np.array([next_obvs])
+                    rewards = np.array([rewards])
+
             else:
                 #environment not multi-agent compatible 
                 next_obvs, rewards, done, _ = env.step(actions[0])

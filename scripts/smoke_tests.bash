@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+#script to test rl_training on all variations of environments and algorithms to ensure all can complete training
+#these tests do not ensure that the algorithms or environments will perform as designed just that they 
+#will run without errors
+
 #do not exit on error
 set +e
 
