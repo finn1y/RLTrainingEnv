@@ -114,7 +114,7 @@ if __name__ == "__main__":
     if args.Environment in envs[:6]:
         env = gym.make(args.Environment, enable_render=args.render, n_robots=args.agents)
     elif args.Environment in envs[6:7]:
-        env = gym.make(args.Environment, is_render=args.render, n_agents=args.agents)
+        env = gym.make(args.Environment, is_render=args.render, n_agents=args.agents, save_robot_path=True)
     else:
         env = gym.make(args.Environment)
 
@@ -163,6 +163,9 @@ if __name__ == "__main__":
     all_losses = []
     all_rewards = []
 
+    if args.Environment in envs[6:7]:
+        robot_paths = []
+
     if args.render:
         env.render()
     
@@ -193,7 +196,7 @@ if __name__ == "__main__":
             
             if args.Environment in envs[:7] or args.Environment in envs[10:12]:
                 #continuous action envs require action in an array
-                next_obvs, rewards, done, _ = env.step(actions)
+                next_obvs, rewards, done, info = env.step(actions)
 
                 if args.Environment in envs[10:12]:
                     #wrap next_obvs and rewards in arrays
@@ -272,6 +275,9 @@ if __name__ == "__main__":
 
                     ep_losses.append(loss)
 
+                if args.Environment == "gym_robot_maze:robot-maze-v0":
+                    robot_paths.append(info["robot_path"])
+
                 all_rewards.append(total_rewards)
                 all_losses.append(ep_losses)
                 break
@@ -282,6 +288,10 @@ if __name__ == "__main__":
     print(f'Training complete after {args.episodes} episodes')
 
     data = {"Parameters": agents[0].get_parameters(), "rewards": all_rewards, "losses": all_losses}
+
+    #add agents' path to data if available
+    if args.Environment == "gym_robot_maze:robot-maze-v0":
+        data["robot_paths"] = robot_paths
     
     if args.directory:
         save_data(args.directory, data, agents, args.Environment, args.Algorithm)
