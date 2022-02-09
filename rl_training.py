@@ -38,8 +38,10 @@ def get_args(envs, algorithms):
     parser.add_argument("-p", "--plot", action="store_true", help="Flag to plot data after completion")
     parser.add_argument("-a", "--agents", type=int, default=1, help="Number of agents")
     parser.add_argument("-d", "--directory", type=str, default=None, help="Save the results from the training to the specified directory")
-    parser.add_argument("-l", "--learning-rate", type=float, default=0.0001, help="Learning rate of the algorithm. Should be greater than 0 and less than 1")
     parser.add_argument("-g", "--gamma", type=float, default=0.99, help="Discount factor to multiply by future expected rewards in the algorithm. Should be greater than 0 and less than 1")
+    parser.add_argument("--epsilon-max", type=float, default=1.0, help="Epsilon max is the intial value of epsilon for epsilon-greedy policy. Should be greater than 0 and less than or equal to 1")
+    parser.add_argument("--epsilon-min", type=float, default=0.01, help="Epsilon min is the final value of epsilon for epsilon-greedy policy which is decayed to over training from epsilon max. Should be greater than 0 and less then epsilon max")
+    parser.add_argument("-l", "--learning-rate", type=float, default=0.0001, help="Learning rate of the algorithm. Should be greater than 0 and less than 1")
     parser.add_argument("--learning-rate-decay", type=float, default=0.95, help="Learning rate decay the base used for exponential decay of the learning rate during training if set to 1 will have no decay. Should be greater than 0 and less than 1")
 
     return parser.parse_args()
@@ -139,12 +141,12 @@ if __name__ == "__main__":
     
     #create list of agent objects depending on the algorithm to be used
     if args.Algorithm == "qlearning":
-        agents = [QLearning([observations, actions], gamma=args.gamma, lr=args.learning_rate, lr_decay=args.learning_rate_decay) for i in range(args.agents)]
+        agents = [QLearning([observations, actions], gamma=args.gamma, epsilon_max=args.epsilon_max, epsilon_min=args.epsilon_min, lr=args.learning_rate, lr_decay=args.learning_rate_decay) for i in range(args.agents)]
 
     if args.Algorithm in algorithms[1:3]:
         #drqn is a deep q-network with a long short term memory replacing the first layer of the q-network 
         recurrent = True if args.Algorithm == "drqn" else False
-        agents = [DQN([observations, args.hidden_size, actions], gamma=args.gamma, lr=args.learning_rate, lr_decay=args.learning_rate_decay, lr_decay_steps=args.time_steps,  DRQN=recurrent, saved_path=args.model_path) for i in range(args.agents)]
+        agents = [DQN([observations, args.hidden_size, actions], gamma=args.gamma, epsilon_max=args.epsilon_max, epsilon_min=args.epsilon_min, lr=args.learning_rate, lr_decay=args.learning_rate_decay, lr_decay_steps=args.time_steps,  DRQN=recurrent, saved_path=args.model_path) for i in range(args.agents)]
 
     if args.Algorithm == "policy_gradient":
         agents = [PolicyGradient([observations, args.hidden_size, actions], gamma=args.gamma, lr=args.learning_rate, lr_decay=args.learning_rate_decay, lr_decay_steps=args.time_steps, saved_path=args.model_path) for i in range(args.agents)]
@@ -156,7 +158,7 @@ if __name__ == "__main__":
         agents = [DDPG([observations, args.hidden_size, actions], gamma=args.gamma, lr=args.learning_rate, lr_decay=args.learning_rate_decay, lr_decay_steps=args.time_steps, saved_path=args.model_path) for i in range(args.agents)]
     
     if args.Algorithm == "ddrqn":
-        agents = [DDRQN([observations, args.hidden_size, actions], gamma=args.gamma, lr=args.learning_rate, lr_decay=args.learning_rate_decay, lr_decay_steps=args.time_steps, saved_path=args.model_path) for i in range(args.agents)]
+        agents = [DDRQN([observations, args.hidden_size, actions], gamma=args.gamma, epsilon_max=args.epsilon_max, epsilon_min=args.epsilon_min, lr=args.learning_rate, lr_decay=args.learning_rate_decay, lr_decay_steps=args.time_steps, saved_path=args.model_path) for i in range(args.agents)]
 
     if args.Algorithm == "ma_actor_critic":
         agents = [MAActorCritic([observations, args.hidden_size, actions], gamma=args.gamma, lr=args.learning_rate, lr_decay=args.learning_rate_decay, lr_decay_steps=args.time_steps, n_agents=args.agents, saved_path=args.model_path) for i in range(args.agents - 1)]

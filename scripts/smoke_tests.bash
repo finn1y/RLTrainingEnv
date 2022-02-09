@@ -51,15 +51,15 @@ for e in ${ENVS[@]}; do
         fi
 
         #test each combination of algorithm and environment with a small number of episodes and timesteps
-        cmd="./rl_training.py $e $a -e 5 -t 100"
+        CMD="./rl_training.py $e $a -e 5 -t 100"
         
         #add multiple agents for multi-agent environments
         if [[ " ${ENVS[@]:0:7} " =~ " ${e} " ]]; then
-            cmd+=" -a 2"
+            CMD+=" -a 2"
         fi
 
-        echo -e "Testing $a on $e\n$cmd" | tee -a logs/smoke_logs.txt
-        eval $cmd >> logs/smoke_logs.txt 2>&1
+        echo -e "Testing $a on $e\n$CMD" | tee -a logs/smoke_logs.txt
+        eval $CMD >> logs/smoke_logs.txt 2>&1
         
         #if exit code is not equal to zero then error occured
         if [ $? -ne 0 ]; then
