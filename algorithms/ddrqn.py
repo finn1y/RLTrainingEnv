@@ -30,8 +30,6 @@ class DDRQN(DQN):
 
             lr_decay_steps is an int which is the number of time steps to decay the learning rate
 
-            n_agents is an int which is the number of agents in the environment
-
             saved_path is a string of the path to the saved Q-network if on is being loaded
         """
         #provide previous action as an input as well as observation
@@ -43,7 +41,7 @@ class DDRQN(DQN):
         #add one to the number of observations for building neural net
         sizes[0] = np.concatenate((sizes[0], np.ones(ones_shape)), axis=axes)
 
-        super(DDRQN, self).__init__(sizes, gamma, epsilon_max, epsilon_min, lr, lr_decay, lr_decay_steps, True, saved_path)
+        super(DDRQN, self).__init__(sizes, gamma=gamma, epsilon_max=epsilon_max, epsilon_min=epsilon_min, lr=lr, lr_decay=lr_decay, lr_decay_steps=lr_decay_steps, DRQN=True, saved_path=saved_path)
         #init agent actions to random action
         self.prev_action = np.random.choice(self.n_actions)
 
@@ -64,7 +62,7 @@ class DDRQN(DQN):
 
             returns the action to take
         """
-        #feed other agent actions to the q-net alongside observations
+        #feed previous action to the q-net alongside observations
         obv = np.concatenate((obv, [self.prev_action]), axis=0)
 
         #take random action with probability epsilon (explore rate)

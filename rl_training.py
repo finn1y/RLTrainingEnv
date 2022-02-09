@@ -38,8 +38,8 @@ def get_args(envs, algorithms):
     parser.add_argument("-p", "--plot", action="store_true", help="Flag to plot data after completion")
     parser.add_argument("-a", "--agents", type=int, default=1, help="Number of agents")
     parser.add_argument("-d", "--directory", type=str, default=None, help="Save the results from the training to the specified directory")
-    parser.add_argument("-l", "--learning-rate", type=float, default=0.0001, help="Learning rate of the algorithm")
-    parser.add_argument("-g", "--gamma", type=float, default=0.99, help="Discount factor to multiply by future expected rewards in the algorithm")
+    parser.add_argument("-l", "--learning-rate", type=float, default=0.0001, help="Learning rate of the algorithm. Should be greater than 0 and less than 1")
+    parser.add_argument("-g", "--gamma", type=float, default=0.99, help="Discount factor to multiply by future expected rewards in the algorithm. Should be greater than 0 and less than 1")
     parser.add_argument("--learning-rate-decay", type=float, default=0.95, help="Learning rate decay the base used for exponential decay of the learning rate during training if set to 1 will have no decay. Should be greater than 0 and less than 1")
 
     return parser.parse_args()
@@ -167,6 +167,7 @@ if __name__ == "__main__":
     all_rewards = []
 
     if args.Environment in envs[6:7]:
+        #robot-maze env can save the path taken by the agents each episode
         robot_paths = []
 
     if args.render:
@@ -202,7 +203,7 @@ if __name__ == "__main__":
                 next_obvs, rewards, done, info = env.step(actions)
 
                 if args.Environment in envs[10:12]:
-                    #wrap next_obvs and rewards in arrays
+                    #for continuous action space, single action envs: wrap next_obvs and rewards in arrays
                     next_obvs = np.array([next_obvs])
                     rewards = np.array([rewards])
 
@@ -215,6 +216,7 @@ if __name__ == "__main__":
 
             for i in range(args.agents):
                 if args.Algorithm == "qlearning" or args.Algorithm == "ddrqn":
+                    #q-learning and ddrqn do not use experience relay of any kind
                     agents[i].train(obvs[i], actions[i], rewards[i], next_obvs[i])
 
                     if args.Algorithm == "ddrqn":
@@ -223,20 +225,24 @@ if __name__ == "__main__":
                         agents[j].receive_comm(agents[i].send_comm())
 
                 if args.Algorithm in algorithms[1:6] or args.Algorithm in algorithms[7:8]:
+                    #all other algorithms use some form of experience replay
                     agents[i].store_step(obvs[i], actions[i], rewards[i], next_obvs[i])
 
             if args.Algorithm in algorithms[6:]:
                 for i in range(1, args.agents):
                     if args.Algorithm == "ma_actor_critic":
+                        #master agent recieves each other agents gathered information for that time step
                         agents[0].receive_comm(agents[i].send_comm())
 
                     if args.Algorithm == "ddrqn":
+                        #agent 0 has the most up to date network and should update all other agents networks
                         agents[i].receive_comm(agents[0].send_comm())
 
             obvs = next_obvs
             total_rewards += rewards
 
             if (args.Algorithm in algorithms[1:3] or args.Algorithm == "ddpg") and t >= batch_size and t % 4 == 0:
+                #for expereince replay using a batch size train agents once batch size is reached and then every 4 timesteps
                 losses = []
 
                 for i in range(args.agents):    
@@ -244,18 +250,27 @@ if __name__ == "__main__":
                     losses.append(loss)    
 
                     if t % 20 == 0:
+                        #update the target network every 20 timesteps after the batch size is reached
                         agents[i].update_target_net()
 
                 ep_losses.append(loss)
-                
+
             if done or t == (args.time_steps - 1):
+                #final timestep either goal state is reached or max timesteps reached
                 print(f'Episode {e} finished after {t} time steps with total rewards = {total_rewards},')
 
-                if args.Algorithm in algorithms[:3]:
+                if args.Algorithm == "ddrqn":
+                    #ddrqn updates target network at the end of the episode
+                    for i in range(args.agents):
+                        agents[i].update_target_net()
+
+                if args.Algorithm in algorithms[:3] or args.Algorithm == "ddrqn":
+                    #algorithms using epsilon greedy policy must update value of epsilon
                     for i in range(args.agents):
                         agents[i].update_parameters(e, args.episodes)
                 
                 if args.Algorithm in algorithms[3:5]:
+                    #for experience replay using previous episode train agents at end of episode
                     losses = []
 
                     for i in range(args.agents):
@@ -265,12 +280,15 @@ if __name__ == "__main__":
                     ep_losses.append(losses)
 
                 if args.Algorithm in algorithms[7:8]:
+                    #for experience replay using previous episode train agents at end of episode
                     losses = []
 
+                    #train actor and critic network in master
                     loss = agents[0].train()
                     losses.append(loss)
 
                     for i in range(1, args.agents):
+                        #slaves train actor network using value from master critic network
                         agents[i].receive_comm(agents[0].send_comm())
 
                         loss = agents[i].train()
@@ -290,6 +308,7 @@ if __name__ == "__main__":
 
     print(f'Training complete after {args.episodes} episodes')
 
+    #parameters are the same for all agents so only need to save a single agents parameters
     data = {"Parameters": agents[0].get_parameters(), "rewards": all_rewards, "losses": all_losses}
 
     #add agents' path to data if available
@@ -308,5 +327,4 @@ if __name__ == "__main__":
         plt.show()
 
     sys.exit(0)
-
 
