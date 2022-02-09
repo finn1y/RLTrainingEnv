@@ -46,7 +46,7 @@ nor are policy ensembles.
 #### [Distributed Deep Recurrent Q-Network](algorithms/ddrqn.py) (DDRQN)
 
 Distributed Deep Recurrent Q-Network is implemented based on the changes to Deep Q-Networks suggested by Foerster et al in [[10]](#10) 
-for multi-agent environments. Communication is pre-defined in this implementation and is not learnt as is the case for RIAL and DIAL. 
+for multi-agent environments. Due to the nature of this simulation instead of direct inter-agent weight sharing (i.e. directly tying all network weights) agents share weights via communication each updating the their network parameters in turn and then communicating the updated weights to the next agent until all agents have performed their updates. 
 
 ## Included Environments
 
@@ -139,8 +139,8 @@ R. Lowe, Y. Wu, A. Tamar et al, “Multi-Agent Actor-Critic for Mixed Cooperativ
 *arXiv:1706.02275v4 [cs.LG]*, 2020. Available: [link](https://arxiv.org/abs/1706.02275v4) [Accessed 2 Feb 2022]
 
 <a id="10">[10]</a>
-J.N. Foerster, Y.M. Assael, N. de Freitas et al, “Learning to Communicate with Deep Multi-Agent Reinforcement Learning”, 
-*arXiv:1605.06676v2 [cs.AI]*, 2016. Available: [link](https://arxiv.org/abs/1605.06676v2) [Accessed 2 Feb 2022]
+J.N. Foerster, Y.M. Assael, N. de Freitas et al, “Learning to Communicate to Solve Riddles with Deep Distributed Recurrent Q-Networks”, 
+*arXiv:1602.02672 [cs.AI]*, 2016. Available: [link](https://arxiv.org/abs/1602.02672) [Accessed 9 Feb 2022]
 
 <a id="11">[11]</a>
 M. Chan, "gym-maze", *GitHub*, 2020. Available: [link](https://github.com/MattChanTK/gym-maze) [Accessed 2 Feb 2022]
