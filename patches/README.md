@@ -8,7 +8,7 @@ To apply a patch to a git repository then:
 
 1. copy the patch into the relevant repo
 2. move to that repo
-3. apply the patch
+3. apply the patch with `git apply <patch_name>.patch`
 
 taking `gym_maze_multi_agent.patch` as an example:
 

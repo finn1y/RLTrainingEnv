@@ -8,7 +8,7 @@
 set +e
 
 #ensure script is executed from root
-cd "$(dirname $0)/.."
+cd "$(dirname $0)/../rl_training_env/"
 
 #all discrete envs to be tested
 ENVS=("maze-random-5x5-v0" "maze-random-10x10-v0" "maze-random-100x100-v0" 
@@ -21,17 +21,17 @@ ALGORITHMS=("qlearning" "dqn" "drqn" "policy_gradient" "actor_critic" "ddrqn" "m
 FAILS=()
 
 #make logs dir if doesn't exist
-if [ ! -d logs/ ]; then
-    mkdir -p logs/
+if [ ! -d ../logs/ ]; then
+    mkdir -p ../logs/
 fi
 
 #make smoke log file if doesn't exist
-if [ ! -f logs/smoke_logs.txt ]; then
-    touch logs/smoke_logs.txt
+if [ ! -f ../logs/smoke_logs.txt ]; then
+    touch ../logs/smoke_logs.txt
 fi
 
 #clear log contents
-: > logs/smoke_logs.txt
+: > ../logs/smoke_logs.txt
 
 for e in ${ENVS[@]}; do
     for a in ${ALGORITHMS[@]}; do
@@ -58,8 +58,8 @@ for e in ${ENVS[@]}; do
             CMD+=" -a 2"
         fi
 
-        echo -e "Testing $a on $e\n$CMD" | tee -a logs/smoke_logs.txt
-        eval $CMD >> logs/smoke_logs.txt 2>&1
+        echo -e "Testing $a on $e\n$CMD" | tee -a ../logs/smoke_logs.txt
+        eval $CMD >> ../logs/smoke_logs.txt 2>&1
         
         #if exit code is not equal to zero then error occured
         if [ $? -ne 0 ]; then
@@ -71,7 +71,7 @@ for e in ${ENVS[@]}; do
         fi
 
         #break up each log entry with a newline for readability
-        echo -ne "\n" >> logs/smoke_logs.txt
+        echo -ne "\n" >> ../logs/smoke_logs.txt
 
     done
 done
@@ -83,7 +83,7 @@ for fail in ${FAILS[@]}; do
     #format fail for grep of log file
     GREP_IN=$(echo "$fail" | tr '!' ' ')
     #find line number in log file for the failed tests' logs
-    LINE_N=$(grep -n "$GREP_IN" logs/smoke_logs.txt | cut -f1 -d:)
+    LINE_N=$(grep -n "$GREP_IN" ../logs/smoke_logs.txt | cut -f1 -d:)
     
     STR=$(echo "  $fail" | sed -r 's/[!]+/ with /g')
     STR+=", at line $LINE_N in smoke_logs.txt"

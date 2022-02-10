@@ -12,41 +12,41 @@ All algorithms using gradient descent on a neural network use the Adam optimiser
 All algorithm implementations also include exploration rate (epsilon) and learning rate (alpha) decay where appropriate;
 this can be removed by setting the relevant decay rate to 1.
 
-#### [Q-Learning](algorithms/qlearning.py)
+#### [Q-Learning](rl_training_env/algorithms/qlearning.py)
 
 Q-learning is implemented based on the algorithm described by Sutton and Barto in [[3]](#3).
 
-#### [Deep Q-Network](algorithms/dqn.py) (DQN)
+#### [Deep Q-Network](rl_training_env/algorithms/dqn.py) (DQN)
 
 Deep Q-network is implemeneted based on the algorithm described by Minh et al in [[4]](#4).
 However it does not use CNNs as the environments used in this training are not array based 
 (i.e. not an RGB array screen representation) 
 
-#### [Deep Recurrent Q-Network](algorithms/dqn.py) (DRQN)
+#### [Deep Recurrent Q-Network](rl_training_env/algorithms/dqn.py) (DRQN)
 
 Deep Recurrent Q-Network is implemented based on the alterations to DQN as suggested by Hausknecht and Stone in [[5]](#5). 
 Similarly to DQN CNNs are not used. (Note this algorithm is implemented as DQN with a DRQN flag to change the first neural net layer)
 
-#### [Policy Gradient](algorihms/policy_grad.py) (PG)
+#### [Policy Gradient](rl_training_env/algorihms/policy_grad.py) (PG)
 
 Policy Gradient is implemented based on the algorithm suggested by Sutton et al in [[6]](#6) 
 and its counterpart in [[7]](#7) by Silver et al.
 
-#### [Advantage Actor Critic](algorithms/actor_critic.py) (A2C)
+#### [Advantage Actor Critic](rl_training_env/algorithms/actor_critic.py) (A2C)
 
 Advantage Actor Critic is implemented based on one of the actor critic variations suggested by Bhatnagar et al in [[8]](#8).
 
-#### [Deep Deterministic Policy Gradient](algorithms/ddpg.py) (DDPG)
+#### [Deep Deterministic Policy Gradient](rl_training_env/algorithms/ddpg.py) (DDPG)
 
 Deep Deterministic Policy Gradient is implemented based on the algorithm as suggested in [[9]](#9) by Lillicrap et al.
 
-#### [Multi-Agent Actor Critic](algorithms/ma_actor_critic.py) (MA Actor Critic)
+#### [Multi-Agent Actor Critic](rl_training_env/algorithms/ma_actor_critic.py) (MA Actor Critic)
 
 Multi-Agent Actor Critic is implemented based on a the algorithm described by Lowe et al in [[10]](#10). 
 As the multi-agent environments are cooperative there is communication of agent policy so no policy inference is required 
 nor are policy ensembles.
 
-#### [Distributed Deep Recurrent Q-Network](algorithms/ddrqn.py) (DDRQN)
+#### [Distributed Deep Recurrent Q-Network](rl_training_env/algorithms/ddrqn.py) (DDRQN)
 
 Distributed Deep Recurrent Q-Network is implemented based on the changes to Deep Q-Networks suggested by Foerster et al in [[11]](#11) 
 for multi-agent environments. Due to the nature of this simulation instead of direct inter-agent weight sharing (i.e. directly tying all network weights) agents share weights via communication each updating the their network parameters in turn and then communicating the updated weights to the next agent until all agents have performed their updates. 
@@ -91,18 +91,13 @@ An openai gym environment shipped with openai gym under classic control environm
 ```
 git clone https://github.com/finn1y/RLTraingingEnv
 ```
-2. Clone dependencies from github
-```
-git clone https://github.com/finn1y/gym-robot-maze
-git clone https://github.com/MattChanTK/gym-maze
-```
-3. Apply dependency patches, described in [patches](patches/README.md)
-4. Install python dependencies in repo
+2. Install python dependencies in repo
 ```
 cd RLTrainingEnv
 pip install -r requirements.txt
 ```
-5. Enjoy training some RL agents!
+3. Apply dependency patches, described in [patches](patches/README.md)
+4. Enjoy training some RL agents!
 
 ## References
 

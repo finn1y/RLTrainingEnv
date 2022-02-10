@@ -1,6 +1,6 @@
 gym==0.21.0
--e ../gym-maze
--e ../gym-robot-maze
+-e git+https://github.com/MattChanTK/gym-maze.git#egg=gym-maze
+-e git+https://github.com/finn1y/gym-robot-maze.git#egg=gym-robot-maze
 keras==2.7.0
 matplotlib==3.4.3
 numpy==1.21.2
