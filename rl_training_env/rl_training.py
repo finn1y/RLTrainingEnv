@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, sys
+import os, sys, subprocess
 import argparse, pickle
 import gym
 import gym_maze
@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-#single-agent algorithms (can be used as independent multi-agent algorithms)
+#single agent algorithms can be used as independent multi-agent algorithms
 from algorithms.qlearning import QLearning
 from algorithms.dqn import DQN
 from algorithms.policy_grad import PolicyGradient
@@ -16,8 +16,8 @@ from algorithms.actor_critic import ActorCritic
 from algorithms.ddpg import DDPG
 
 #multi-agent algorithms
-from algorithms.ddrqn import DDRQN
 from algorithms.ma_actor_critic import MAActorCritic
+from algorithms.ddrqn import DDRQN
 
 def get_args(envs, algorithms):
     """
@@ -95,6 +95,39 @@ def save_data(path, data, agent, env, algorithm):
             with open(f'{path}/q_table{i}.pkl', "wb") as handle:
                 pickle.dump(agents[i].q_table, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+def get_installed_envs():
+    """
+        function to check which envs are installed on the system and return those available
+
+        returns list of envs available on this system given installed packages
+    """
+    envs = []
+    
+    #run pip show [package] to see if package is installed
+    gym = subprocess.check_output(["pip", "show", "gym"])
+    maze = subprocess.check_output(["pip", "show", "gym-maze"])
+    robot_maze = subprocess.check_output(["pip", "show", "gym-robot-maze"])
+
+    #if package is installed then no warning is given so related envs can be added to list
+    if not b'WARNING: Package(s) not found:' in gym:
+        envs.extend(["CartPole-v1", "Acrobot-v1", "MountainCar-v0", "MountainCarContinuous-v0", "Pendulum-v1"])
+    #if package is not installed then related envs cannot be added to list as not available on this system
+    else:
+        print("WARNING: gym not installed, unable to use environments installed with gym package. Install with: pip install gym")
+
+    if not b'WARNING: Package(s) not found:' in maze:
+        envs.extend(["maze-random-5x5-v0", "maze-random-10x10-v0", "maze-random-100x100-v0", 
+            "maze-sample-5x5-v0", "maze-sample-10x10-v0", "maze-sample-100x100-v0"])
+    else:
+        print("WARNING: gym-maze not installed, unable to use environments installed with gym-maze package. Install with: pip install -e git+https://github.com/MattChanTK/gym-maze.git#egg=gym-maze")
+
+    if not b'WARNING: Package(s) not found:' in robot_maze:
+        envs.extend(["gym_robot_maze:robot-maze-v0"])
+    else:
+        print("WARNING: gym-robot-maze not installed, unable to use environments installed with gym-robot-maze package. Install with: pip install -e git+https://github.com/finn1y/gym-robot-maze.git#egg=gym-robot-maze")
+
+    return envs
+
 if __name__ == "__main__":
     #list of all possible environements
     envs = ["maze-random-5x5-v0", "maze-random-10x10-v0", "maze-random-100x100-v0", 
@@ -104,7 +137,8 @@ if __name__ == "__main__":
     #algorithms[:6] are single-agent algorithms (can be used as independent multi-agent algorithms), algorithms[6:] are multi-agent algorithms
     algorithms = ["qlearning", "dqn", "drqn", "policy_gradient", "actor_critic", "ddpg", "ddrqn", "ma_actor_critic"]
 
-    args = get_args(envs, algorithms)
+    #only provide installed envs on this system as options to user
+    args = get_args(get_installed_envs(), algorithms)
 
     #check that chosen algorithm can be used with chosen environment action space
     if args.Algorithm == "ddpg" and args.Environment in envs[:10]:
