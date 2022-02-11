@@ -8,16 +8,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-#single agent algorithms can be used as independent multi-agent algorithms
-from algorithms.qlearning import QLearning
-from algorithms.dqn import DQN
-from algorithms.policy_grad import PolicyGradient
-from algorithms.actor_critic import ActorCritic
-from algorithms.ddpg import DDPG
-
-#multi-agent algorithms
-from algorithms.ma_actor_critic import MAActorCritic
-from algorithms.ddrqn import DDRQN
+from algorithms import *
 
 def get_args(envs, algorithms):
     """

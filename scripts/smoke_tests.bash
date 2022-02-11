@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#script to test rl_training on all variations of environments and algorithms to ensure all can complete training
+#script to test rl_training_env on all variations of environments and algorithms to ensure all can complete training
 #these tests do not ensure that the algorithms or environments will perform as designed just that they 
 #will run without errors
 
@@ -51,7 +51,7 @@ for e in ${ENVS[@]}; do
         fi
 
         #test each combination of algorithm and environment with a small number of episodes and timesteps
-        CMD="./rl_training.py $e $a -e 5 -t 100"
+        CMD="./rl_training_env.py $e $a -e 5 -t 100"
         
         #add multiple agents for multi-agent environments
         if [[ " ${ENVS[@]:0:7} " =~ " ${e} " ]]; then

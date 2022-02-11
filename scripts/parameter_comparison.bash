@@ -256,7 +256,7 @@ for p_val in ${P_VALS[@]}; do
     #directory to save data to
     DIR="saved_data/parameters/${ENV}_${ALGORITHM}/${PARAMETER}_${p_val}"
 
-    CMD="./rl_training.py $ENV $ALGORITHM -e 1000 --$PARAMETER $p_val -d $DIR" 
+    CMD="./rl_training_env.py $ENV $ALGORITHM -e 1000 --$PARAMETER $p_val -d $DIR" 
 
     echo -e "Running $a on $ENV\n$CMD" | tee -a ../logs/parameter_sa_logs.txt
     eval $CMD >> ../logs/parameter_sa_logs.txt

@@ -40,7 +40,7 @@ for a in ${ALGORITHMS[@]}; do
     #directory to save data to
     DIR="saved_data/single_agent/$ENV/$a"
 
-    CMD="./rl_training.py $ENV $a -e 1000 -d $DIR" 
+    CMD="./rl_training_env.py $ENV $a -e 1000 -d $DIR" 
 
     echo -e "Running $a on $ENV\n$CMD" | tee -a ../logs/algorithm_sa_logs.txt
     eval $CMD >> ../logs/algorithm_sa_logs.txt

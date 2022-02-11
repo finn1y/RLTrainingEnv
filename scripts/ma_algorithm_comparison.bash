@@ -39,7 +39,7 @@ for a in ${ALGORITHMS[@]}; do
     #directory to mave data to
     DIR="saved_data/multi_agent/$ENV/$a"
 
-    CMD="./rl_training.py $ENV $a -e 1000 -d $DIR -a 2" 
+    CMD="./rl_training_env.py $ENV $a -e 1000 -d $DIR -a 2" 
 
     echo -e "Running $a on $ENV\n$CMD" | tee -a ../logs/algorithm_ma_logs.txt
     eval $CMD >> ../logs/algorithm_ma_logs.txt
