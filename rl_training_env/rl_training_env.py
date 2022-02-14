@@ -34,6 +34,8 @@ def get_args(envs, algorithms):
     parser.add_argument("--epsilon-min", type=float, default=0.01, help="Epsilon min is the final value of epsilon for epsilon-greedy policy which is decayed to over training from epsilon max. Should be greater than 0 and less then epsilon max")
     parser.add_argument("-l", "--learning-rate", type=float, default=0.0001, help="Learning rate of the algorithm. Should be greater than 0 and less than 1")
     parser.add_argument("--learning-rate-decay", type=float, default=0.95, help="Learning rate decay the base used for exponential decay of the learning rate during training if set to 1 will have no decay. Should be greater than 0 and less than 1")
+    parser.add_argument("--maze-load-path", type=str, default=None, help="Path to load maze object from, for gym-robot-maze environment")
+    parser.add_argument("--maze-save-path", type=str, default=None, help="Path to save maze object to, for gym-robot-maze environment")
 
     return parser.parse_args()
 
@@ -144,7 +146,7 @@ if __name__ == "__main__":
     if args.Environment in envs[:6]:
         env = gym.make(args.Environment, enable_render=args.render, n_robots=args.agents)
     elif args.Environment in envs[6:7]:
-        env = gym.make(args.Environment, is_render=args.render, n_agents=args.agents, save_robot_path=True)
+        env = gym.make(args.Environment, is_render=args.render, n_agents=args.agents, save_robot_path=True, save_maze_path=args.maze_save_path, load_maze_path=args.maze_load_path)
     else:
         env = gym.make(args.Environment)
 
