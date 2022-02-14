@@ -2,25 +2,88 @@
 
 #script to compare multi-agent algorithms on the same environment
 
+#----------------------------------------------------------------------------------------
+# Set up script
+#----------------------------------------------------------------------------------------
+
 #do not exit on error
 set +e
 
 #move to root
 cd "$(dirname $0)/../rl_training_env/"
 
+#----------------------------------------------------------------------------------------
+# Functions
+#----------------------------------------------------------------------------------------
+
+#function to print help message to terminal
+Help() {
+    echo "Usage: ./ma_algorithm_comparison.bash [OPTIONS] ENV"
+    echo -e "ENV\t\tEnvironment to train algorithm on.\n\t\tChoose from {${ENVS[@]}}"
+    echo -e "OPTIONS:"
+    echo -e "  -h, --help\tShows this message"
+    echo -e "  --maze-load-path\tPath to load maze from, for use with gym-robot-maze environment"
+}
+
+#function to process command line arguments and set to relevant variables
+Get_args() {
+    if [ ! -z $1 ]; then
+        #loop until all arguments have been processed
+        while [ $# -gt 0 ]; do
+            #switch argument to check which option is being processed
+            case $1 in
+
+                "-h" | "--help")
+                Help
+                exit 0
+                ;;
+    
+                "--maze-load-path")
+                    shift
+                    MAZE_LOAD_PATH=$1
+                ;;
+    
+                *)
+                #no option means either positional argument or not a valid options
+                if [[ " ${ENVS[@]} " =~ " $1 " ]]; then
+                    ENV=$1
+                else
+                    echo "WARNING: $1 is not a valid option. Use -h or --help to see valid options"
+                fi
+                ;;
+
+            esac
+
+            #shift options to evaluate next
+            shift
+        done
+
+        #check necessary options supplied by user
+        if [ -z $ENV ]; then
+            #no env supplied by user
+            echo "ERROR: no environment supplied"
+            Help
+            exit 1
+        fi
+    fi
+}
+
+#----------------------------------------------------------------------------------------
+# Global variables
+#----------------------------------------------------------------------------------------
+
+#possible envs
 ENVS=("maze-random-5x5-v0" "maze-random-10x10-v0" "maze-random-100x100-v0" 
         "maze-mample-5x5-v0" "maze-mample-10x10-v0" "maze-mample-100x100-v0" "gym_robot_maze:robot-maze-v0")
 
-if [[ ! -z $1 && " ${ENVS[@]} " =~ " $1 " ]]; then
-    #env is supplied by user
-    ENV=$1
-else
-    echo -e "ERROR: invalid (or no) environment supplied to test algorithms on\nChoose from {${ENVS[@]}}"
-    exit 1
-fi
-
 #algorithms to test
 ALGORITHMS=("qlearning" "dqn" "drqn" "policy_gradient" "actor_critic" "ddrqn" "ma_actor_critic")
+
+#----------------------------------------------------------------------------------------
+# main
+#----------------------------------------------------------------------------------------
+
+Get_args
 
 #make logs dir if doesn't exist
 if [ ! -d ../logs/ ]; then
@@ -40,6 +103,11 @@ for a in ${ALGORITHMS[@]}; do
     DIR="saved_data/multi_agent/$ENV/$a"
 
     CMD="./rl_training_env.py $ENV $a -e 1000 -d $DIR -a 2" 
+
+    #if maze load path supplied and env is robot-maze add option to command
+    if [[ -z $MAZE_LOAD_PATH && "$ENV" == "gym_robot_maze:robot-maze-v0" ]]; then
+        CMD+=" --maze-load-path $MAZE_LOAD_PATH"
+    fi
 
     echo -e "Running $a on $ENV\n$CMD" | tee -a ../logs/algorithm_ma_logs.txt
     eval $CMD >> ../logs/algorithm_ma_logs.txt
