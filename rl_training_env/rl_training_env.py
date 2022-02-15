@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+#python module to run a reinforcement learning algorithm on an openai gym environment with a variety of settable parameters
+
+#-----------------------------------------------------------------------------------------------------------
+# Imports
+#-----------------------------------------------------------------------------------------------------------
+
 import os, sys, subprocess
 import argparse, pickle
 import gym
@@ -9,6 +15,10 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 from algorithms import *
+
+#-----------------------------------------------------------------------------------------------------------
+# Functions
+#-----------------------------------------------------------------------------------------------------------
 
 def get_args(envs, algorithms):
     """
@@ -121,7 +131,15 @@ def get_installed_envs():
 
     return envs
 
+#-----------------------------------------------------------------------------------------------------------
+# main
+#-----------------------------------------------------------------------------------------------------------
+
 if __name__ == "__main__":
+    #-------------------------------------------------------------------------------------------------------
+    # main: variables
+    #-------------------------------------------------------------------------------------------------------
+
     #list of all possible environements
     envs = ["maze-random-5x5-v0", "maze-random-10x10-v0", "maze-random-100x100-v0", 
             "maze-sample-5x5-v0", "maze-sample-10x10-v0", "maze-sample-100x100-v0", "gym_robot_maze:robot-maze-v0", 
@@ -164,8 +182,10 @@ if __name__ == "__main__":
     elif type(env.observation_space) == gym.spaces.box.Box:
         observations = [env.observation_space.low, env.observation_space.high]
 
-    batch_size = args.batch_size
-    
+    #-------------------------------------------------------------------------------------------------------
+    # main: algorithm objects
+    #-------------------------------------------------------------------------------------------------------
+
     #create list of agent objects depending on the algorithm to be used
     if args.Algorithm == "qlearning":
         agents = [QLearning([observations, actions], gamma=args.gamma, epsilon_max=args.epsilon_max, epsilon_min=args.epsilon_min, lr=args.learning_rate, lr_decay=args.learning_rate_decay) for i in range(args.agents)]
@@ -192,6 +212,8 @@ if __name__ == "__main__":
         #agent 0 is the master the rest are slaves
         agents.insert(0, MAActorCritic([observations, args.hidden_size, actions], gamma=args.gamma, lr=args.learning_rate, lr_decay=args.learning_rate_decay, lr_decay_steps=args.time_steps, n_agents=args.agents, master=True, saved_path=args.model_path))
 
+    all_obvs = []
+    all_actions = []
     all_losses = []
     all_rewards = []
 
@@ -199,9 +221,13 @@ if __name__ == "__main__":
         #robot-maze env can save the path taken by the agents each episode
         robot_paths = []
 
+    #-------------------------------------------------------------------------------------------------------
+    # main: algorithm loop
+    #-------------------------------------------------------------------------------------------------------
+
     if args.render:
         env.render()
-    
+
     for e in range(args.episodes):
         obvs = env.reset()
         
@@ -210,12 +236,17 @@ if __name__ == "__main__":
             obvs = np.array([obvs]) #wrap obvs in array
 
         ep_losses = []
+        ep_obvs = []
+        ep_actions = []
         total_rewards = np.zeros(args.agents)
         done = False
 
         for t in range(args.time_steps):
             if args.render:
                 env.render()
+            
+            #Apply action to environment
+            #===============================================================================================
 
             if args.Algorithm == "ddpg":
                 #continuous action space requires float type actions
@@ -243,6 +274,11 @@ if __name__ == "__main__":
                 next_obvs = np.array([next_obvs])
                 rewards = np.array([rewards])
 
+            #===============================================================================================
+
+            #Train algorithms
+            #===============================================================================================
+
             for i in range(args.agents):
                 if args.Algorithm == "qlearning" or args.Algorithm == "ddrqn":
                     #q-learning and ddrqn do not use experience relay of any kind
@@ -257,6 +293,7 @@ if __name__ == "__main__":
                     #all other algorithms use some form of experience replay
                     agents[i].store_step(obvs[i], actions[i], rewards[i], next_obvs[i])
 
+
             if args.Algorithm in algorithms[6:]:
                 for i in range(1, args.agents):
                     if args.Algorithm == "ma_actor_critic":
@@ -267,15 +304,18 @@ if __name__ == "__main__":
                         #agent 0 has the most up to date network and should update all other agents networks
                         agents[i].receive_comm(agents[0].send_comm())
 
+            ep_obvs.append(actions)
+            ep_actions.append(obvs)
+
             obvs = next_obvs
             total_rewards += rewards
 
-            if (args.Algorithm in algorithms[1:3] or args.Algorithm == "ddpg") and t >= batch_size and t % 4 == 0:
+            if (args.Algorithm in algorithms[1:3] or args.Algorithm == "ddpg") and t >= args.batch_size and t % 4 == 0:
                 #for expereince replay using a batch size train agents once batch size is reached and then every 4 timesteps
                 losses = []
 
                 for i in range(args.agents):    
-                    loss = agents[i].train(batch_size)
+                    loss = agents[i].train(args.batch_size)
                     losses.append(loss)    
 
                     if t % 20 == 0:
@@ -283,6 +323,11 @@ if __name__ == "__main__":
                         agents[i].update_target_net()
 
                 ep_losses.append(loss)
+
+            #===============================================================================================
+
+            #Episode finished
+            #===============================================================================================
 
             if done or t == (args.time_steps - 1):
                 #final timestep either goal state is reached or max timesteps reached
@@ -328,14 +373,23 @@ if __name__ == "__main__":
                 if args.Environment == "gym_robot_maze:robot-maze-v0":
                     robot_paths.append(info["robot_path"])
 
+                all_obvs.append(ep_obvs)
+                all_actions.append(ep_actions)
                 all_rewards.append(total_rewards)
                 all_losses.append(ep_losses)
                 break
 
+            #===============================================================================================
+
+            #gym-maze env exit when window closed
             if args.Environment in envs[:6] and env.is_game_over():
                 sys.exit(0)
 
     print(f'Training complete after {args.episodes} episodes')
+
+    #-------------------------------------------------------------------------------------------------------
+    # main: process and save captured data
+    #-------------------------------------------------------------------------------------------------------
 
     #parameters are the same for all agents so only need to save a single agents parameters
     data = {"Parameters": agents[0].get_parameters(), "rewards": all_rewards, "losses": all_losses}

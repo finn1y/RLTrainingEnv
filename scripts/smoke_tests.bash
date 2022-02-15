@@ -4,11 +4,37 @@
 #these tests do not ensure that the algorithms or environments will perform as designed just that they 
 #will run without errors
 
+#----------------------------------------------------------------------------------------
+# Set up script
+#----------------------------------------------------------------------------------------
+
 #do not exit on error
 set +e
 
 #ensure script is executed from root
 cd "$(dirname $0)/../rl_training_env/"
+
+#----------------------------------------------------------------------------------------
+# Functions
+#----------------------------------------------------------------------------------------
+
+Fails_str() {
+    for fail in ${FAILS[@]}; do
+        #format fail for grep of log file
+        local GREP_IN=$(echo "$fail" | tr '!' ' ')
+        #find line number in log file for the failed tests' logs
+        local LINE_N=$(grep -n "$GREP_IN" ../logs/smoke_logs.txt | cut -f1 -d:)
+    
+        local STR=$(echo "  $fail" | sed -r 's/[!]+/ with /g')
+        STR+=", at line $LINE_N in smoke_logs.txt"
+
+        echo "$STR"
+    done
+}
+
+#----------------------------------------------------------------------------------------
+# Global variables
+#----------------------------------------------------------------------------------------
 
 #all discrete envs to be tested
 ENVS=("maze-random-5x5-v0" "maze-random-10x10-v0" "maze-random-100x100-v0" 
@@ -18,7 +44,12 @@ ENVS=("maze-random-5x5-v0" "maze-random-10x10-v0" "maze-random-100x100-v0"
 #all discrete action algorithms to be tested
 ALGORITHMS=("qlearning" "dqn" "drqn" "policy_gradient" "actor_critic" "ddrqn" "ma_actor_critic" "ddpg")
 
+#init fails array to store any failed tests
 FAILS=()
+
+#----------------------------------------------------------------------------------------
+# main
+#----------------------------------------------------------------------------------------
 
 #make logs dir if doesn't exist
 if [ ! -d ../logs/ ]; then
@@ -79,17 +110,8 @@ done
 #print out number of failed tests and list of which tests failed
 echo "CI completed with ${#FAILS[@]} failed tests:"
 
-for fail in ${FAILS[@]}; do
-    #format fail for grep of log file
-    GREP_IN=$(echo "$fail" | tr '!' ' ')
-    #find line number in log file for the failed tests' logs
-    LINE_N=$(grep -n "$GREP_IN" ../logs/smoke_logs.txt | cut -f1 -d:)
-    
-    STR=$(echo "  $fail" | sed -r 's/[!]+/ with /g')
-    STR+=", at line $LINE_N in smoke_logs.txt"
-
-    echo "$STR"
-done
+FAILS_STR=`Fails_str`
+echo "$FAILS_STR"
 
 exit 0
 

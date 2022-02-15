@@ -27,45 +27,60 @@ Help() {
 
 #function to process command line arguments and set to relevant variables
 Get_args() {
-    if [ ! -z $1 ]; then
-        #loop until all arguments have been processed
-        while [ $# -gt 0 ]; do
-            #switch argument to check which option is being processed
-            case $1 in
+    #loop until all arguments have been processed
+    while [ $# -gt 0 ]; do
+        #switch argument to check which option is being processed
+        case $1 in
 
-                "-h" | "--help")
-                Help
-                exit 0
-                ;;
-    
-                "--maze-load-path")
-                    shift
-                    MAZE_LOAD_PATH=$1
-                ;;
-    
-                *)
-                #no option means either positional argument or not a valid options
-                if [[ " ${ENVS[@]} " =~ " $1 " ]]; then
-                    ENV=$1
-                else
-                    echo "WARNING: $1 is not a valid option. Use -h or --help to see valid options"
-                fi
-                ;;
-
-            esac
-
-            #shift options to evaluate next
-            shift
-        done
-
-        #check necessary options supplied by user
-        if [ -z $ENV ]; then
-            #no env supplied by user
-            echo "ERROR: no environment supplied"
+            "-h" | "--help")
             Help
-            exit 1
-        fi
+            exit 0
+            ;;
+    
+            "--maze-load-path")
+                shift
+                MAZE_LOAD_PATH=$1
+            ;;
+    
+            *)
+            #no option means either positional argument or not a valid options
+            if [[ " ${ENVS[@]} " =~ " $1 " ]]; then
+                ENV=$1
+            else
+                echo "WARNING: $1 is not a valid option. Use -h or --help to see valid options"
+            fi
+            ;;
+
+        esac
+
+        #shift options to evaluate next
+        shift
+    done
+
+    #check necessary options supplied by user
+    if [ -z $ENV ]; then
+        #no env supplied by user
+        echo "ERROR: no environment supplied"
+        Help
+        exit 1
     fi
+}
+
+#function to get the name of the save directory for data
+Get_save_dir() {
+    #find all directories that have multi-agent data
+    local DIRS=( $(find -maxdepth 3 -type d -name "single_agent*") )
+
+    #find returns empty string if none found -> number of elements in array will be 1 if none found
+    if [ -z "${DIRS[0]}" ]; then
+        #if element is empty string then n is 0
+        local n=0
+    else
+        #n is the number of directories total
+        local n=${#DIRS[@]}
+    fi
+
+    echo "saved_data/single_agent_$n"
 }
 
 #----------------------------------------------------------------------------------------
@@ -84,7 +99,8 @@ ALGORITHMS=("qlearning" "dqn" "drqn" "policy_gradient" "actor_critic")
 # main
 #----------------------------------------------------------------------------------------
 
-Get_args
+#pass script arguments to get args function for processing
+Get_args "$@"
 
 #make logs dir if doesn't exist
 if [ ! -d ../logs/ ]; then
@@ -99,9 +115,12 @@ fi
 #clear log contents
 : > ../logs/algorithm_sa_logs.txt
 
+#get directory prefix
+DIR_PREFIX=`Get_save_dir`
+
 for a in ${ALGORITHMS[@]}; do
     #directory to save data to
-    DIR="saved_data/single_agent/$ENV/$a"
+    DIR="$DIR_PREFIX/$ENV/$a"
 
     CMD="./rl_training_env.py $ENV $a -e 1000 -d $DIR" 
 
