@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from algorithms.qlearning import QLearning
 from algorithms.dqn import DQN

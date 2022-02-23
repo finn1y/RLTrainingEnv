@@ -315,7 +315,7 @@ index 0be08f1..4dad3d1 100644
 -            raise ValueError("dir cannot be %s. The only valid dirs are %s."
 -                             % (str(dir), str(self.__maze.COMPASS.keys())))
 +    def move_robot(self, dirs):
-+        for i in range(np.size(dirs)): 
++        for i in range(np.size(dirs)):
 +            if dirs[i] not in self.__maze.COMPASS.keys():
 +                raise ValueError("dir cannot be %s. The only valid dirs are %s."
 +                                 % (str(dirs[i]), str(self.__maze.COMPASS.keys())))
@@ -339,7 +339,7 @@ index 0be08f1..4dad3d1 100644
 +                # if it's in a portal afterward
 +                if self.maze.is_portal(self.robots[i]):
 +                    self.__robots[i] = np.array(self.maze.get_portal(tuple(self.robot)).teleport(tuple(self.robot)))
-    
++
 +        self.__draw_robots(transparency=255)
  
      def reset_robot(self):

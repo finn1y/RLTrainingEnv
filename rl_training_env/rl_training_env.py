@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #python module to run a reinforcement learning algorithm on an openai gym environment with a variety of settable parameters
 

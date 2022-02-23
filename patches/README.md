@@ -13,10 +13,12 @@ To apply a patch to a git repository then:
 taking `gym_maze_multi_agent.patch` as an example:
 
 ```
-cp ./gym_maze_multi_agent.patch ../../gym-maze/
-cd ../../gym-maze
+cp ./gym_maze_multi_agent.patch <path_to_installed_repo>/gym-maze/
+cd <path_to_installed_repo>/gym-maze/
 git apply gym_maze_multi_agent.patch
 ```
+
+Note: if installed using pip in a virtual env then the repo may be located in the virtual env's directory under "src"
 
 To view what the patch changes either by looking in the `.patch` file or by using the `git diff` command after applying the patch.
 
