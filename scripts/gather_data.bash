@@ -20,10 +20,10 @@ cd "$(dirname $0)/../"
 ROBOT_MAZE_PATH="rl_training_env/robot_maze_sample/"
 
 #list of single agent environments
-SA_ENVS=("CartPole-v1" "maze-sample-5x5-v0" "maze-sample-10x10-v0" "maze-sample-100x100-v0" "gym_robot_maze:robot-maze-v0")
+SA_ENVS=("CartPole-v1" "maze-sample-5x5-v0" "maze-sample-10x10-v0" "maze-sample-100x100-v0" "gym_robot_maze:RobotMaze-v1")
 
 #array of multi-agent environments
-MA_ENVS=("maze-sample-5x5-v0" "maze-sample-10x10-v0" "maze-sample-100x100-v0" "gym_robot_maze:robot-maze-v0")
+MA_ENVS=("maze-sample-5x5-v0" "maze-sample-10x10-v0" "maze-sample-100x100-v0" "gym_robot_maze:RobotMaze-v1")
 
 #----------------------------------------------------------------------------------------
 # main
@@ -33,7 +33,7 @@ MA_ENVS=("maze-sample-5x5-v0" "maze-sample-10x10-v0" "maze-sample-100x100-v0" "g
 for env in ${SA_ENVS[@]}; do
     CMD="./scripts/sa_algorithm_comparison.bash $env"
 
-    if [[ "$env" == "gym_robot_maze:robot-maze-v0" ]]; then
+    if [[ "$env" == "gym_robot_maze:RobotMaze-v1" ]]; then
         CMD+=" --maze-load-path $ROBOT_MAZE_PATH"
     fi
 
@@ -49,7 +49,7 @@ done
 for env in ${MA_ENVS[@]}; do
     CMD="./scripts/ma_algorithm_comparison.bash $env"
 
-    if [[ "$env" == "gym_robot_maze:robot-maze-v0" ]]; then
+    if [[ "$env" == "gym_robot_maze:RobotMaze-v1" ]]; then
         CMD+=" --maze-load-path $ROBOT_MAZE_PATH"
     fi
 

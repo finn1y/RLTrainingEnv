@@ -257,7 +257,7 @@ Get_save_dir() {
 
 #possible environments to test on
 ENVS=("maze-random-5x5-v0" "maze-random-10x10-v0" "maze-random-100x100-v0" 
-        "maze-sample-5x5-v0" "maze-sample-10x10-v0" "maze-sample-100x100-v0" "gym_robot_maze:robot-maze-v0" 
+        "maze-sample-5x5-v0" "maze-sample-10x10-v0" "maze-sample-100x100-v0" "gym_robot_maze:RobotMaze-v1" 
         "CartPole-v1" "Acrobot-v1" "MountainCar-v0" "MountainCarContinuous-v0" "Pendulum-v1")
 
 #possible algorithms to test
@@ -303,7 +303,7 @@ for p_val in ${P_VALS[@]}; do
     CMD="./rl_training_env.py $ENV $ALGORITHM -e 1000 --$PARAMETER $p_val -d $DIR" 
 
     #if maze load path supplied and env is robot-maze add option to command
-    if [[ -z $MAZE_LOAD_PATH && "$ENV" == "gym_robot_maze:robot-maze-v0" ]]; then
+    if [[ -z $MAZE_LOAD_PATH && "$ENV" == "gym_robot_maze:RobotMaze-v1" ]]; then
         CMD+=" --maze-load-path $MAZE_LOAD_PATH"
     fi
 
