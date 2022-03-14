@@ -32,3 +32,10 @@ To view what the patch changes either by looking in the `.patch` file or by usin
 2. Removes maximum number of steps from the environment
 3. Fixes minor issue when int passed as action but error raised during processing
 
+#### [Advanced Multi Agent Patch](gym_maze_advanced_multi_agent.patch)
+
+1. Improves upon previous patch by making env check whether it is used as single agent or multi-agent
+2. Will have same functionality as previously for multi-agent use
+3. For single agent use does not require or output actions, states etc. inside arrays
+
+

@@ -1,0 +1,3303 @@
+From 0b995e27493e8a64f2294c144a1c0633cf9fbc00 Mon Sep 17 00:00:00 2001
+From: Matthew Chan <matthew.tk.chan@gmail.com>
+Date: Tue, 4 Oct 2016 19:52:09 -0700
+Subject: [PATCH 01/22] Initial commit
+
+---
+ .gitignore | 89 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ README.md  |  2 ++
+ 2 files changed, 91 insertions(+)
+ create mode 100644 .gitignore
+ create mode 100644 README.md
+
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..72364f9
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,89 @@
++# Byte-compiled / optimized / DLL files
++__pycache__/
++*.py[cod]
++*$py.class
++
++# C extensions
++*.so
++
++# Distribution / packaging
++.Python
++env/
++build/
++develop-eggs/
++dist/
++downloads/
++eggs/
++.eggs/
++lib/
++lib64/
++parts/
++sdist/
++var/
++*.egg-info/
++.installed.cfg
++*.egg
++
++# PyInstaller
++#  Usually these files are written by a python script from a template
++#  before PyInstaller builds the exe, so as to inject date/other infos into it.
++*.manifest
++*.spec
++
++# Installer logs
++pip-log.txt
++pip-delete-this-directory.txt
++
++# Unit test / coverage reports
++htmlcov/
++.tox/
++.coverage
++.coverage.*
++.cache
++nosetests.xml
++coverage.xml
++*,cover
++.hypothesis/
++
++# Translations
++*.mo
++*.pot
++
++# Django stuff:
++*.log
++local_settings.py
++
++# Flask stuff:
++instance/
++.webassets-cache
++
++# Scrapy stuff:
++.scrapy
++
++# Sphinx documentation
++docs/_build/
++
++# PyBuilder
++target/
++
++# IPython Notebook
++.ipynb_checkpoints
++
++# pyenv
++.python-version
++
++# celery beat schedule file
++celerybeat-schedule
++
++# dotenv
++.env
++
++# virtualenv
++venv/
++ENV/
++
++# Spyder project settings
++.spyderproject
++
++# Rope project settings
++.ropeproject
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..7a63188
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,2 @@
++# gym-maze
++A basic 2D maze environment where an agent start from the top left corner and try to find its way to the bottom left corner.
+-- 
+2.25.1
+
+
+From 6db50b26de2e22ad0efeb72b75f99733e3397031 Mon Sep 17 00:00:00 2001
+From: Matthew Chan <matthew.tk.chan@gmail.com>
+Date: Tue, 4 Oct 2016 19:59:31 -0700
+Subject: [PATCH 02/22] Migrating files from under tuzzer/ai-gym/gy-maze to its
+ own repo.
+
+---
+ gym_maze/__init__.py                          |   7 +
+ gym_maze/envs/__init__.py                     |   2 +
+ gym_maze/envs/maze_env.py                     |  79 ++++
+ gym_maze/envs/maze_generator.py               |  25 ++
+ gym_maze/envs/maze_samples/maze2d_100x100.npy | Bin 0 -> 80080 bytes
+ gym_maze/envs/maze_samples/maze2d_10x10.npy   | Bin 0 -> 880 bytes
+ gym_maze/envs/maze_samples/maze2d_3x3.npy     | Bin 0 -> 152 bytes
+ gym_maze/envs/maze_samples/maze2d_5x5.npy     | Bin 0 -> 280 bytes
+ gym_maze/envs/maze_view_2d.py                 | 379 ++++++++++++++++++
+ setpup.py                                     |   6 +
+ 10 files changed, 498 insertions(+)
+ create mode 100644 gym_maze/__init__.py
+ create mode 100644 gym_maze/envs/__init__.py
+ create mode 100644 gym_maze/envs/maze_env.py
+ create mode 100644 gym_maze/envs/maze_generator.py
+ create mode 100644 gym_maze/envs/maze_samples/maze2d_100x100.npy
+ create mode 100644 gym_maze/envs/maze_samples/maze2d_10x10.npy
+ create mode 100644 gym_maze/envs/maze_samples/maze2d_3x3.npy
+ create mode 100644 gym_maze/envs/maze_samples/maze2d_5x5.npy
+ create mode 100644 gym_maze/envs/maze_view_2d.py
+ create mode 100644 setpup.py
+
+diff --git a/gym_maze/__init__.py b/gym_maze/__init__.py
+new file mode 100644
+index 0000000..7b83778
+--- /dev/null
++++ b/gym_maze/__init__.py
+@@ -0,0 +1,7 @@
++from gym.envs.registration import register
++
++register(
++    id='maze-v0',
++    entry_point='gym_maze.envs:MazeEnv',
++    timestep_limit=1000,
++)
+diff --git a/gym_maze/envs/__init__.py b/gym_maze/envs/__init__.py
+new file mode 100644
+index 0000000..c210402
+--- /dev/null
++++ b/gym_maze/envs/__init__.py
+@@ -0,0 +1,2 @@
++from gym_maze.envs.maze_env import MazeEnv
++from gym_maze.envs.maze_view_2d import MazeView2D
+diff --git a/gym_maze/envs/maze_env.py b/gym_maze/envs/maze_env.py
+new file mode 100644
+index 0000000..385b17a
+--- /dev/null
++++ b/gym_maze/envs/maze_env.py
+@@ -0,0 +1,79 @@
++import gym
++from gym import error, spaces, utils
++from gym.utils import seeding
++import numpy as np
++import os
++from gym_maze.envs.maze_view_2d import MazeView2D
++
++
++class MazeEnv(gym.Env):
++    metadata = {
++        "render.modes": ["human"],
++    }
++
++    ACTION = ["N", "S", "E", "W"]
++
++    def __init__(self):
++
++        self.maze_view = MazeView2D(maze_name="OpenAI Gym - Maze",
++                                    maze_file_path="maze2d_5x5.npy",
++                                    screen_size=(640, 640))
++        self.maze_size = self.maze_view.maze_size
++
++        # forward or backward in each dimension
++        self.action_space = spaces.Discrete(2*len(self.maze_size))
++
++        # observation is the x, y coordinate of the grid
++        low = np.zeros(len(self.maze_size), dtype=int)
++        high =  np.array(self.maze_size, dtype=int) - np.ones(len(self.maze_size), dtype=int)
++        self.observation_space = spaces.Box(low, high)
++
++        # initial condition
++        self.state = None
++        self.steps_beyond_done = None
++
++        # Simulation related variables.
++        self._seed()
++        self.reset()
++
++        # Just need to initialize the relevant attributes
++        self._configure()
++
++    def _configure(self, display=None):
++        self.display = display
++
++    def _seed(self, seed=None):
++        self.np_random, seed = seeding.np_random(seed)
++        return [seed]
++
++    def _step(self, action):
++        if isinstance(action, int):
++            self.maze_view.move_robot(self.ACTION[action])
++        else:
++            self.maze_view.move_robot(action)
++
++        if np.array_equal(self.maze_view.robot, self.maze_view.goal):
++            reward = 1
++            done = True
++        else:
++            reward = -0.1/(self.maze_size[0]*self.maze_size[1])
++            done = False
++
++        self.state = self.maze_view.robot
++
++        info = {}
++
++        return self.state, reward, done, info
++
++    def _reset(self):
++        self.maze_view.reset_robot()
++        self.state = np.zeros(2)
++        self.steps_beyond_done = None
++        self.done = False
++        return self.state
++
++    def _render(self, mode='human', close=False):
++        if close:
++            self.maze_view.quit_game()
++
++        return self.maze_view.update()
+diff --git a/gym_maze/envs/maze_generator.py b/gym_maze/envs/maze_generator.py
+new file mode 100644
+index 0000000..9e6ca1d
+--- /dev/null
++++ b/gym_maze/envs/maze_generator.py
+@@ -0,0 +1,25 @@
++import os
++from gym_maze.envs.maze_view_2d import Maze
++
++if __name__ == "__main__":
++
++    # check if the folder "maze_samples" exists in the current working directory
++    dir_name = os.path.join(os.getcwd(), "maze_samples")
++    if not os.path.exists(dir_name):
++        # create it if it doesn't
++        os.mkdir(dir_name)
++
++    # increment number until it finds a name that is not being used already (max maze_999)
++    maze_path = None
++    for i in range(1, 1000):
++        maze_name = "maze2d_%03d.npy" % i
++        maze_path = os.path.join(dir_name, maze_name)
++        if not os.path.exists(maze_path):
++            break
++        if i == 999:
++            raise ValueError("There are already 999 mazes in the %s." % dir_name)
++
++    maze = Maze(maze_size=(5, 5))
++    maze.save_maze(maze_path)
++    print("New maze generated and saved at %s." %  maze_path)
++
+diff --git a/gym_maze/envs/maze_samples/maze2d_100x100.npy b/gym_maze/envs/maze_samples/maze2d_100x100.npy
+new file mode 100644
+index 0000000000000000000000000000000000000000..2f1648c24c6f25b06f581c51fa6609ecddc2e69a
+GIT binary patch
+literal 80080
+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
+R-yUA%+b_R#zTKz&e**Wsr<4Ey
+
+literal 0
+HcmV?d00001
+
+diff --git a/gym_maze/envs/maze_samples/maze2d_10x10.npy b/gym_maze/envs/maze_samples/maze2d_10x10.npy
+new file mode 100644
+index 0000000000000000000000000000000000000000..69a14c3bd5c327cebeaf60e6028456a8ae8954e2
+GIT binary patch
+literal 880
+zcmZ{eu?oU46h%{U5WgZ@6f(4%h;ui^#lcB}jVMSfiJSNp{;(BumItrP<=l7POFz5A
+zc7Lo)YhJF4`JCL^y3K9nymgl$JyYmUL+awMZ^J#uvCr4=h$AnW+S{gHdi%EJn@`OD
+zo0f#D!dl{!?7=f}kGZ@jJvrC*c!xQ6NaiFSj7JYMm%a91(#PW-ckoDh=}E??he__h
+nc=Q_M<MH2G;&G3Cn8YLTNa?}6%bsL<d>D_E@6fXcYo6@CobMLS
+
+literal 0
+HcmV?d00001
+
+diff --git a/gym_maze/envs/maze_samples/maze2d_3x3.npy b/gym_maze/envs/maze_samples/maze2d_3x3.npy
+new file mode 100644
+index 0000000000000000000000000000000000000000..58a9ec023c4d1ae2364e05dd91c3559234a8d43d
+GIT binary patch
+literal 152
+zcmbR27wQ`j$;jZwP_3SlTAW;@Zl$1ZlWC!@qoAIaUsO_*m=~X4l#&V(cT3DEP6dh=
+pXCxM+0{I%oIts>`ItsN4aKOdH00E3>G)x>ub3o-;pfrpRqXDix6=(ne
+
+literal 0
+HcmV?d00001
+
+diff --git a/gym_maze/envs/maze_samples/maze2d_5x5.npy b/gym_maze/envs/maze_samples/maze2d_5x5.npy
+new file mode 100644
+index 0000000000000000000000000000000000000000..a1f75d0e0f5764d0eb77cbe3c73932c6adb1e653
+GIT binary patch
+literal 280
+zcmbR27wQ`j$;jZwP_3SlTAW;@Zl$1ZlWC!@qoAIaUsO_*m=~X4l#&V(cT3DEP6dh=
+zXCxM+0{I%IItr$mItsN4aKOdH00Asenh{FF#9@4xJdEZ*(+5)z6Nl-;MZ?s?%tNPP
+M=D@^Zd|c)M0C0d6nE(I)
+
+literal 0
+HcmV?d00001
+
+diff --git a/gym_maze/envs/maze_view_2d.py b/gym_maze/envs/maze_view_2d.py
+new file mode 100644
+index 0000000..7e785f8
+--- /dev/null
++++ b/gym_maze/envs/maze_view_2d.py
+@@ -0,0 +1,379 @@
++import pygame
++import random
++import numpy as np
++import os
++
++
++class MazeView2D:
++
++    def __init__(self, maze_name="Maze2D", maze_file_path=None, screen_size=(640, 640)):
++
++        # PyGame configurations
++        pygame.init()
++        pygame.display.set_caption(maze_name)
++        self.clock = pygame.time.Clock()
++        self.__game_over = False
++
++        # Load a maze
++        if maze_file_path is None:
++            dir_path = os.path.dirname(os.path.abspath(__file__))
++            maze_file_path = os.path.join(dir_path, "maze_samples", "maze2d_10x10.npy")
++        else:
++            if not os.path.exists(maze_file_path):
++                dir_path = os.path.dirname(os.path.abspath(__file__))
++                rel_path = os.path.join(dir_path, "maze_samples", maze_file_path)
++                if os.path.exists(rel_path):
++                    maze_file_path = rel_path
++                else:
++                    raise FileExistsError("Cannot find %s." % maze_file_path)
++
++        self.__maze = Maze(maze_cells=Maze.load_maze(maze_file_path))
++        self.maze_size = self.__maze.maze_size
++        self.screen = pygame.display.set_mode(screen_size)
++
++        # Create the Robot
++        self.__robot = np.zeros(2, dtype=int)
++
++        # Set the Goal
++        self.__goal = np.array(self.maze_size) - np.array((1, 1))
++
++        # Create a background
++        self.background = pygame.Surface(self.screen.get_size()).convert()
++        self.background.fill((255, 255, 255))
++
++        # Create a layer for the maze
++        self.maze_layer = pygame.Surface(self.screen.get_size()).convert_alpha()
++        self.maze_layer.fill((0, 0, 0, 0,))
++
++        # show the maze
++        self.__draw_maze()
++
++        # show the robot
++        self.__draw_robot()
++
++        # show the goals
++        self.__draw_goal()
++
++    def update(self):
++        try:
++            self.__view_update()
++            self.__controller_update()
++        except Exception as e:
++            self.__game_over = True
++            self.quit_game()
++            raise e
++        finally:
++            return self.__game_over
++
++    def quit_game(self):
++
++        try:
++            if self.game_over:
++                self.game_over = True
++            pygame.display.quit()
++            pygame.quit()
++        except Exception:
++            pass
++
++    def move_robot(self, dir):
++        if dir not in self.__maze.COMPASS.keys():
++            raise ValueError("dir cannot be %s. The only valid dirs are %s." % (str(dir), str(self.__maze.COMPASS.keys())))
++        if self.__maze.is_open(self.__robot, dir):
++            # update the drawing
++            self.__draw_robot(transparency=0)
++            self.__robot += np.array(self.__maze.COMPASS[dir])
++            self.__draw_robot(transparency=255)
++
++    def reset_robot(self):
++
++        self.__draw_robot(transparency=0)
++        self.__robot = np.zeros(2, dtype=int)
++        self.__draw_robot(transparency=255)
++
++    def __controller_update(self):
++        if not self.__game_over:
++            for event in pygame.event.get():
++                if event.type == pygame.QUIT:
++                    self.__game_over = True
++                    self.quit_game()
++
++    def __view_update(self):
++        if not self.__game_over:
++            self.clock.tick(60)
++            # update the robot's position
++            self.__draw_robot()
++            self.__draw_goal()
++            # update the screen
++            self.screen.blit(self.background, (0, 0))
++            self.screen.blit(self.maze_layer,(0, 0))
++            pygame.display.flip()
++
++    def __draw_maze(self):
++
++        # drawing the horizontal lines
++        for y in range(self.maze.MAZE_H):
++            pygame.draw.line(self.maze_layer, (0, 0, 0, 255), (0, y * self.CELL_H),
++                             (self.SCREEN_W, y * self.CELL_H))
++        # drawing the vertical lines
++        for x in range(self.maze.MAZE_W):
++            pygame.draw.line(self.maze_layer, (0, 0, 0, 255), (x * self.CELL_W, 0),
++                             (x * self.CELL_W, self.SCREEN_H))
++
++        # breaking the walls
++        for x in range(len(self.maze.maze_cells)):
++            for y in range (len(self.maze.maze_cells[x])):
++                # check the which walls are open in each cell
++                walls_status = self.maze.get_walls_status(self.maze.maze_cells[x, y])
++                dirs = ""
++                for dir, open in walls_status.items():
++                    if open:
++                        dirs += dir
++                self.__cover_walls(x, y, dirs)
++
++    def __cover_walls(self, x, y, dirs, colour=(0, 0, 255, 15)):
++
++        dx = x * self.CELL_W
++        dy = y * self.CELL_H
++
++        if not isinstance(dirs, str):
++            raise TypeError("dirs must be a str.")
++
++        for dir in dirs:
++            if dir == "S":
++                line_head = (dx + 1, dy + self.CELL_H)
++                line_tail = (dx + self.CELL_W - 1, dy + self.CELL_H)
++            elif dir == "N":
++                line_head = (dx + 1, dy)
++                line_tail = (dx + self.CELL_W - 1, dy)
++            elif dir == "W":
++                line_head = (dx, dy + 1)
++                line_tail = (dx, dy + self.CELL_H - 1)
++            elif dir == "E":
++                line_head = (dx + self.CELL_W, dy + 1)
++                line_tail = (dx + self.CELL_W, dy + self.CELL_H - 1)
++            else:
++                raise ValueError("The only valid directions are (N, S, E, W).")
++
++            pygame.draw.line(self.maze_layer, colour, line_head, line_tail)
++
++    def __draw_robot(self, colour=(0, 0, 150), transparency=255):
++
++        x = int(self.__robot[0] * self.CELL_W + self.CELL_W * 0.5 + 0.5)
++        y = int(self.__robot[1] * self.CELL_H + self.CELL_H * 0.5 + 0.5)
++        r = int(min(self.CELL_W, self.CELL_H)/5 + 0.5)
++
++        pygame.draw.circle(self.maze_layer, colour + (transparency,), (x, y), r)
++
++    def __draw_goal(self, colour=(150, 0, 0), transparency=155):
++
++        x = int(self.__goal[0] * self.CELL_W + 0.5 + 1)
++        y = int(self.__goal[1] * self.CELL_H + 0.5 + 1)
++        w = int(self.CELL_W + 0.5 - 1)
++        h = int(self.CELL_H + 0.5 - 1)
++        pygame.draw.rect(self.maze_layer, colour + (transparency,), (x, y, w, h))
++
++    @property
++    def maze(self):
++        return self.__maze
++
++    @property
++    def robot(self):
++        return self.__robot
++
++    @property
++    def goal(self):
++        return self.__goal
++
++    @property
++    def game_over(self):
++        return self.__game_over
++
++    @property
++    def SCREEN_SIZE(self):
++        return tuple(self.screen.get_size())
++
++    @property
++    def SCREEN_W(self):
++        return int(self.SCREEN_SIZE[0])
++
++    @property
++    def SCREEN_H(self):
++        return int(self.SCREEN_SIZE[1])
++
++    @property
++    def CELL_W(self):
++        return self.SCREEN_W / self.maze.MAZE_W
++
++    @property
++    def CELL_H(self):
++        return self.SCREEN_H / self.maze.MAZE_H
++
++
++class Maze:
++
++    COMPASS = {
++        "N": (0, -1),
++        "E": (1, 0),
++        "S": (0, 1),
++        "W": (-1, 0)
++    }
++
++    def __init__(self, maze_cells=None, maze_size=(10,10)):
++
++        # maze member variables
++        self.maze_cells = maze_cells
++
++        # Use existing one if exists
++        if self.maze_cells is not None:
++            if isinstance(self.maze_cells, (np.ndarray, np.generic)) and len(self.maze_cells.shape) == 2:
++                self.maze_size = tuple(maze_cells.shape)
++            else:
++                raise ValueError("maze_cells must be a 2D NumPy array.")
++        # Otherwise, generate a random one
++        else:
++            # maze's configuration parameters
++            if not (isinstance(maze_size, (list, tuple)) and len(maze_size) == 2):
++                raise ValueError("maze_size must be a tuple: (width, height).")
++            self.maze_size = maze_size
++
++            self._generate_maze()
++
++    def save_maze(self, file_path):
++
++        if not isinstance(file_path, str):
++            raise TypeError("Invalid file_path. It must be a str.")
++
++        if not os.path.exists(os.path.dirname(file_path)):
++            raise ValueError("Cannot find the directory for %s." % file_path)
++
++        else:
++            np.save(file_path, self.maze_cells, allow_pickle=False, fix_imports=True)
++
++    @classmethod
++    def load_maze(cls, file_path):
++
++        if not isinstance(file_path, str):
++            raise TypeError("Invalid file_path. It must be a str.")
++
++        if not os.path.exists(file_path):
++            raise ValueError("Cannot find %s." % file_path)
++
++        else:
++            return np.load(file_path, allow_pickle=False, fix_imports=True)
++
++    def _generate_maze(self):
++
++        # list of all cell locations
++        self.maze_cells = np.zeros(self.maze_size, dtype=int)
++
++        # Initializing constants and variables needed for maze generation
++        current_cell = (random.randint(0, self.MAZE_W-1), random.randint(0, self.MAZE_H-1))
++        num_cells_visited = 1
++        cell_stack = [current_cell]
++
++        # Continue until all cells are visited
++        while cell_stack:
++
++            # restart from a cell from the cell stack
++            current_cell = cell_stack.pop()
++            x0, y0 = current_cell
++
++            # find neighbours of the current cells that actually exist
++            neighbours = dict()
++            for dir_key, dir_val in self.COMPASS.items():
++                x1 = x0 + dir_val[0]
++                y1 = y0 + dir_val[1]
++                # if cell is within bounds
++                if 0 <= x1 < self.MAZE_W and 0 <= y1 < self.MAZE_H:
++                    # if all four walls still exist
++                    if self.all_walls_intact(self.maze_cells[x1, y1]):
++                        neighbours[dir_key] = (x1, y1)
++
++            # if there is a neighbour
++            if neighbours:
++                # select a random neighbour
++                dir = random.choice(tuple(neighbours.keys()))
++                x1, y1 = neighbours[dir]
++
++                # knock down the wall between the current cell and the selected neighbour
++                self.maze_cells[x1, y1] = self.__break_walls(self.maze_cells[x1, y1], self.__get_opposite_wall(dir))
++
++                # push the current cell location to the stack
++                cell_stack.append(current_cell)
++
++                # make the this neighbour cell the current cell
++                cell_stack.append((x1, y1))
++
++                # increment the visited cell count
++                num_cells_visited += 1
++
++    def is_open(self, cell, dir):
++        # check if it would be out-of-bound
++        x1 = cell[0] + self.COMPASS[dir][0]
++        y1 = cell[1] + self.COMPASS[dir][1]
++
++        # if cell is still within bounds after the move
++        if 0 <= x1 < self.MAZE_W and 0 <= y1 < self.MAZE_H:
++            # check if the wall is opened
++            this_wall = bool(self.get_walls_status(self.maze_cells[cell[0], cell[1]])[dir])
++            other_wall = bool(self.get_walls_status(self.maze_cells[x1, y1])[self.__get_opposite_wall(dir)])
++            return this_wall or other_wall
++        return False
++
++    @property
++    def MAZE_W(self):
++        return int(self.maze_size[0])
++
++    @property
++    def MAZE_H(self):
++        return int(self.maze_size[1])
++
++    @classmethod
++    def get_walls_status(cls, cell):
++        walls = {
++            "N" : (cell & 0x1) >> 0,
++            "E" : (cell & 0x2) >> 1,
++            "S" : (cell & 0x4) >> 2,
++            "W" : (cell & 0x8) >> 3,
++        }
++        return walls
++
++    @classmethod
++    def all_walls_intact(cls, cell):
++        return cell & 0xF == 0
++
++    @classmethod
++    def __break_walls(cls, cell, dirs):
++        if "N" in dirs:
++            cell |= 0x1
++        if "E" in dirs:
++            cell |= 0x2
++        if "S" in dirs:
++            cell |= 0x4
++        if "W" in dirs:
++            cell |= 0x8
++        return cell
++
++    @classmethod
++    def __get_opposite_wall(cls, dirs):
++
++        if not isinstance(dirs, str):
++            raise TypeError("dirs must be a str.")
++
++        opposite_dirs = ""
++
++        for dir in dirs:
++            if dir == "N":
++                opposite_dir = "S"
++            elif dir == "S":
++                opposite_dir = "N"
++            elif dir == "E":
++                opposite_dir = "W"
++            elif dir == "W":
++                opposite_dir = "E"
++            else:
++                raise ValueError("The only valid directions are (N, S, E, W).")
++
++            opposite_dirs += opposite_dir
++
++        return opposite_dirs
+diff --git a/setpup.py b/setpup.py
+new file mode 100644
+index 0000000..e46464e
+--- /dev/null
++++ b/setpup.py
+@@ -0,0 +1,6 @@
++from setuptools import setup
++
++setup(name="gym_maze",
++      version="0.1",
++      install_requires=['gym','pygame']
++)
+-- 
+2.25.1
+
+
+From b70a82ac3a32e6d6cd8a755de51587e0fbfeb0af Mon Sep 17 00:00:00 2001
+From: Matthew Chan <matthew.tk.chan@gmail.com>
+Date: Tue, 4 Oct 2016 22:03:33 -0700
+Subject: [PATCH 03/22] Packaged it to work on its own and with gym.
+
+---
+ README.md |  2 --
+ setpup.py |  6 ------
+ setup.py  | 13 +++++++++++++
+ 3 files changed, 13 insertions(+), 8 deletions(-)
+ delete mode 100644 setpup.py
+ create mode 100644 setup.py
+
+diff --git a/README.md b/README.md
+index 7a63188..e69de29 100644
+--- a/README.md
++++ b/README.md
+@@ -1,2 +0,0 @@
+-# gym-maze
+-A basic 2D maze environment where an agent start from the top left corner and try to find its way to the bottom left corner.
+diff --git a/setpup.py b/setpup.py
+deleted file mode 100644
+index e46464e..0000000
+--- a/setpup.py
++++ /dev/null
+@@ -1,6 +0,0 @@
+-from setuptools import setup
+-
+-setup(name="gym_maze",
+-      version="0.1",
+-      install_requires=['gym','pygame']
+-)
+diff --git a/setup.py b/setup.py
+new file mode 100644
+index 0000000..ac55d1b
+--- /dev/null
++++ b/setup.py
+@@ -0,0 +1,13 @@
++from setuptools import setup
++
++setup(name="gym_maze",
++      version="0.3",
++      url="https://github.com/tuzzer/gym-maze",
++      author="Matthew T.K. Chan",
++      license="MIT",
++      packages=["gym_maze", "gym_maze.envs"],
++      package_data = {
++          "gym_maze.envs": ["maze_samples/*.npy"]
++      },
++      install_requires = ["gym", "pygame", "numpy"]
++)
+-- 
+2.25.1
+
+
+From 3037ab69b6c62adf4a7c4928af8a468b1a7ed122 Mon Sep 17 00:00:00 2001
+From: Matthew Chan <matthew.tk.chan@gmail.com>
+Date: Wed, 5 Oct 2016 00:17:19 -0700
+Subject: [PATCH 04/22] Interfaced with gym's monitoring codes.
+
+---
+ gym_maze/__init__.py          |  2 +-
+ gym_maze/envs/maze_env.py     | 25 +++++++++++++++++++------
+ gym_maze/envs/maze_view_2d.py | 20 ++++++++++++--------
+ 3 files changed, 32 insertions(+), 15 deletions(-)
+
+diff --git a/gym_maze/__init__.py b/gym_maze/__init__.py
+index 7b83778..f747167 100644
+--- a/gym_maze/__init__.py
++++ b/gym_maze/__init__.py
+@@ -3,5 +3,5 @@ from gym.envs.registration import register
+ register(
+     id='maze-v0',
+     entry_point='gym_maze.envs:MazeEnv',
+-    timestep_limit=1000,
++    timestep_limit=100000,
+ )
+diff --git a/gym_maze/envs/maze_env.py b/gym_maze/envs/maze_env.py
+index 385b17a..e381702 100644
+--- a/gym_maze/envs/maze_env.py
++++ b/gym_maze/envs/maze_env.py
+@@ -1,20 +1,25 @@
++import numpy as np
++
+ import gym
+ from gym import error, spaces, utils
+ from gym.utils import seeding
+-import numpy as np
+-import os
+ from gym_maze.envs.maze_view_2d import MazeView2D
+ 
++import logging
++logger = logging.getLogger(__name__)
++
+ 
+ class MazeEnv(gym.Env):
+     metadata = {
+-        "render.modes": ["human"],
++        "render.modes": ["human", "rgb_array"],
+     }
+ 
+     ACTION = ["N", "S", "E", "W"]
+ 
+     def __init__(self):
+ 
++        self.viewer = None
++
+         self.maze_view = MazeView2D(maze_name="OpenAI Gym - Maze",
+                                     maze_file_path="maze2d_5x5.npy",
+                                     screen_size=(640, 640))
+@@ -39,6 +44,9 @@ class MazeEnv(gym.Env):
+         # Just need to initialize the relevant attributes
+         self._configure()
+ 
++    def __del__(self):
++        self.maze_view.quit_game()
++
+     def _configure(self, display=None):
+         self.display = display
+ 
+@@ -72,8 +80,13 @@ class MazeEnv(gym.Env):
+         self.done = False
+         return self.state
+ 
+-    def _render(self, mode='human', close=False):
++    def is_game_over(self):
++        return self.maze_view.game_over
++
++    def _render(self, mode="human", close=False):
++
++        """ Viewer only supports human mode currently. """
+         if close:
+-            self.maze_view.quit_game()
++                self.maze_view.quit_game()
+ 
+-        return self.maze_view.update()
++        return self.maze_view.update(mode)
+diff --git a/gym_maze/envs/maze_view_2d.py b/gym_maze/envs/maze_view_2d.py
+index 7e785f8..c784fce 100644
+--- a/gym_maze/envs/maze_view_2d.py
++++ b/gym_maze/envs/maze_view_2d.py
+@@ -54,22 +54,21 @@ class MazeView2D:
+         # show the goals
+         self.__draw_goal()
+ 
+-    def update(self):
++    def update(self, mode="human"):
+         try:
+-            self.__view_update()
++            img_output = self.__view_update(mode)
+             self.__controller_update()
+         except Exception as e:
+             self.__game_over = True
+             self.quit_game()
+             raise e
+-        finally:
+-            return self.__game_over
++        else:
++            return img_output
+ 
+     def quit_game(self):
+ 
+         try:
+-            if self.game_over:
+-                self.game_over = True
++            self.__game_over = True
+             pygame.display.quit()
+             pygame.quit()
+         except Exception:
+@@ -97,16 +96,21 @@ class MazeView2D:
+                     self.__game_over = True
+                     self.quit_game()
+ 
+-    def __view_update(self):
++    def __view_update(self, mode="human"):
+         if not self.__game_over:
+             self.clock.tick(60)
+             # update the robot's position
+             self.__draw_robot()
+             self.__draw_goal()
++
+             # update the screen
+             self.screen.blit(self.background, (0, 0))
+             self.screen.blit(self.maze_layer,(0, 0))
+-            pygame.display.flip()
++
++            if mode == "human":
++                pygame.display.flip()
++
++            return np.flipud(np.rot90(pygame.surfarray.array3d(pygame.display.get_surface())))
+ 
+     def __draw_maze(self):
+ 
+-- 
+2.25.1
+
+
+From 02a2e7b96218b58b4ec2d3b420f99ba43fcc22c6 Mon Sep 17 00:00:00 2001
+From: Matthew Chan <matthew.tk.chan@gmail.com>
+Date: Thu, 6 Oct 2016 01:43:23 -0700
+Subject: [PATCH 05/22] Updated to have random maze environment. Added a
+ sub-class for each configuration.
+
+---
+ gym_maze/__init__.py          | 58 +++++++++++++++++++++++++++-
+ gym_maze/envs/__init__.py     |  2 +-
+ gym_maze/envs/maze_env.py     | 72 ++++++++++++++++++++++++++++++-----
+ gym_maze/envs/maze_view_2d.py | 51 +++++++++++++++++--------
+ 4 files changed, 155 insertions(+), 28 deletions(-)
+
+diff --git a/gym_maze/__init__.py b/gym_maze/__init__.py
+index f747167..37536d0 100644
+--- a/gym_maze/__init__.py
++++ b/gym_maze/__init__.py
+@@ -1,7 +1,61 @@
+ from gym.envs.registration import register
+ 
++
+ register(
+     id='maze-v0',
+-    entry_point='gym_maze.envs:MazeEnv',
+-    timestep_limit=100000,
++    entry_point='gym_maze.envs:MazeEnvSample5x5',
++    timestep_limit=2000,
++)
++
++register(
++    id='maze-sample-5x5-v0',
++    entry_point='gym_maze.envs:MazeEnvSample5x5',
++    timestep_limit=2000,
++)
++
++register(
++    id='maze-random-5x5-v0',
++    entry_point='gym_maze.envs:MazeEnvRandom5x5',
++    timestep_limit=2000,
++    nondeterministic=True,
++)
++
++register(
++    id='maze-sample-10x10-v0',
++    entry_point='gym_maze.envs:MazeEnvSample10x10',
++    timestep_limit=10000,
++)
++
++register(
++    id='maze-random-10x10-v0',
++    entry_point='gym_maze.envs:MazeEnvRandom10x10',
++    timestep_limit=10000,
++    nondeterministic=True,
++)
++
++register(
++    id='maze-sample-3x3-v0',
++    entry_point='gym_maze.envs:MazeEnvSample3x3',
++    timestep_limit=1000,
++)
++
++register(
++    id='maze-random-3x3-v0',
++    entry_point='gym_maze.envs:MazeEnvRandom3x3',
++    timestep_limit=1000,
++    nondeterministic=True,
++)
++
++
++register(
++    id='maze-sample-100x100-v0',
++    entry_point='gym_maze.envs:MazeEnvSample100x100',
++    timestep_limit=1000000,
++)
++
++register(
++    id='maze-random-100x100-v0',
++    entry_point='gym_maze.envs:MazeEnvRandom100x100',
++    timestep_limit=1000000,
++    nondeterministic=True,
+ )
+diff --git a/gym_maze/envs/__init__.py b/gym_maze/envs/__init__.py
+index c210402..536ef3f 100644
+--- a/gym_maze/envs/__init__.py
++++ b/gym_maze/envs/__init__.py
+@@ -1,2 +1,2 @@
+-from gym_maze.envs.maze_env import MazeEnv
++from gym_maze.envs.maze_env import *
+ from gym_maze.envs.maze_view_2d import MazeView2D
+diff --git a/gym_maze/envs/maze_env.py b/gym_maze/envs/maze_env.py
+index e381702..09896c5 100644
+--- a/gym_maze/envs/maze_env.py
++++ b/gym_maze/envs/maze_env.py
+@@ -5,9 +5,6 @@ from gym import error, spaces, utils
+ from gym.utils import seeding
+ from gym_maze.envs.maze_view_2d import MazeView2D
+ 
+-import logging
+-logger = logging.getLogger(__name__)
+-
+ 
+ class MazeEnv(gym.Env):
+     metadata = {
+@@ -16,13 +13,21 @@ class MazeEnv(gym.Env):
+ 
+     ACTION = ["N", "S", "E", "W"]
+ 
+-    def __init__(self):
++    def __init__(self, maze_file=None, maze_size=None):
+ 
+         self.viewer = None
+ 
+-        self.maze_view = MazeView2D(maze_name="OpenAI Gym - Maze",
+-                                    maze_file_path="maze2d_5x5.npy",
+-                                    screen_size=(640, 640))
++        if maze_file:
++            self.maze_view = MazeView2D(maze_name="OpenAI Gym - Maze (%s)" % maze_file,
++                                        maze_file_path=maze_file,
++                                        screen_size=(640, 640))
++        elif maze_size:
++            self.maze_view = MazeView2D(maze_name="OpenAI Gym - Maze (%d x %d)" % maze_size,
++                                        maze_size=maze_size,
++                                        screen_size=(640, 640))
++        else:
++            raise AttributeError("One must supply either a maze_file path (str) or the maze_size (tuple of length 2)")
++
+         self.maze_size = self.maze_view.maze_size
+ 
+         # forward or backward in each dimension
+@@ -84,9 +89,56 @@ class MazeEnv(gym.Env):
+         return self.maze_view.game_over
+ 
+     def _render(self, mode="human", close=False):
+-
+-        """ Viewer only supports human mode currently. """
+         if close:
+-                self.maze_view.quit_game()
++            self.maze_view.quit_game()
+ 
+         return self.maze_view.update(mode)
++
++
++class MazeEnvSample5x5(MazeEnv):
++
++    def __init__(self):
++        super(MazeEnvSample5x5, self).__init__(maze_file="maze2d_5x5.npy")
++
++
++class MazeEnvRandom5x5(MazeEnv):
++
++    def __init__(self):
++        super(MazeEnvRandom5x5, self).__init__(maze_size=(5, 5))
++
++
++class MazeEnvSample10x10(MazeEnv):
++
++    def __init__(self):
++        super(MazeEnvSample10x10, self).__init__(maze_file="maze2d_10x10.npy")
++
++
++class MazeEnvRandom10x10(MazeEnv):
++
++    def __init__(self):
++        super(MazeEnvRandom10x10, self).__init__(maze_size=(10, 10))
++
++
++class MazeEnvSample3x3(MazeEnv):
++
++    def __init__(self):
++        super(MazeEnvSample3x3, self).__init__(maze_file="maze2d_3x3.npy")
++
++
++class MazeEnvRandom3x3(MazeEnv):
++
++    def __init__(self):
++        super(MazeEnvRandom3x3, self).__init__(maze_size=(3, 3))
++
++
++class MazeEnvSample100x100(MazeEnv):
++
++    def __init__(self):
++        super(MazeEnvSample100x100, self).__init__(maze_file="maze2d_100x100.npy")
++
++
++class MazeEnvRandom100x100(MazeEnv):
++
++    def __init__(self):
++        super(MazeEnvRandom100x100, self).__init__(maze_size=(100, 100))
++
+diff --git a/gym_maze/envs/maze_view_2d.py b/gym_maze/envs/maze_view_2d.py
+index c784fce..cbf25c0 100644
+--- a/gym_maze/envs/maze_view_2d.py
++++ b/gym_maze/envs/maze_view_2d.py
+@@ -6,7 +6,7 @@ import os
+ 
+ class MazeView2D:
+ 
+-    def __init__(self, maze_name="Maze2D", maze_file_path=None, screen_size=(640, 640)):
++    def __init__(self, maze_name="Maze2D", maze_file_path=None,  maze_size=(10, 10), screen_size=(640, 640)):
+ 
+         # PyGame configurations
+         pygame.init()
+@@ -16,8 +16,7 @@ class MazeView2D:
+ 
+         # Load a maze
+         if maze_file_path is None:
+-            dir_path = os.path.dirname(os.path.abspath(__file__))
+-            maze_file_path = os.path.join(dir_path, "maze_samples", "maze2d_10x10.npy")
++            self.__maze = Maze(maze_size=maze_size)
+         else:
+             if not os.path.exists(maze_file_path):
+                 dir_path = os.path.dirname(os.path.abspath(__file__))
+@@ -26,17 +25,20 @@ class MazeView2D:
+                     maze_file_path = rel_path
+                 else:
+                     raise FileExistsError("Cannot find %s." % maze_file_path)
++            self.__maze = Maze(maze_cells=Maze.load_maze(maze_file_path))
+ 
+-        self.__maze = Maze(maze_cells=Maze.load_maze(maze_file_path))
+         self.maze_size = self.__maze.maze_size
+         self.screen = pygame.display.set_mode(screen_size)
+ 
+-        # Create the Robot
+-        self.__robot = np.zeros(2, dtype=int)
++        # Set the starting point
++        self.__entrance = np.zeros(2, dtype=int)
+ 
+         # Set the Goal
+         self.__goal = np.array(self.maze_size) - np.array((1, 1))
+ 
++        # Create the Robot
++        self.__robot = self.entrance
++
+         # Create a background
+         self.background = pygame.Surface(self.screen.get_size()).convert()
+         self.background.fill((255, 255, 255))
+@@ -51,7 +53,10 @@ class MazeView2D:
+         # show the robot
+         self.__draw_robot()
+ 
+-        # show the goals
++        # show the entrance
++        self.__draw_entrance()
++
++        # show the goal
+         self.__draw_goal()
+ 
+     def update(self, mode="human"):
+@@ -66,7 +71,6 @@ class MazeView2D:
+             return img_output
+ 
+     def quit_game(self):
+-
+         try:
+             self.__game_over = True
+             pygame.display.quit()
+@@ -76,7 +80,9 @@ class MazeView2D:
+ 
+     def move_robot(self, dir):
+         if dir not in self.__maze.COMPASS.keys():
+-            raise ValueError("dir cannot be %s. The only valid dirs are %s." % (str(dir), str(self.__maze.COMPASS.keys())))
++            raise ValueError("dir cannot be %s. The only valid dirs are %s."
++                             % (str(dir), str(self.__maze.COMPASS.keys())))
++
+         if self.__maze.is_open(self.__robot, dir):
+             # update the drawing
+             self.__draw_robot(transparency=0)
+@@ -98,9 +104,9 @@ class MazeView2D:
+ 
+     def __view_update(self, mode="human"):
+         if not self.__game_over:
+-            self.clock.tick(60)
+             # update the robot's position
+             self.__draw_robot()
++            self.__draw_entrance()
+             self.__draw_goal()
+ 
+             # update the screen
+@@ -168,10 +174,21 @@ class MazeView2D:
+ 
+         pygame.draw.circle(self.maze_layer, colour + (transparency,), (x, y), r)
+ 
+-    def __draw_goal(self, colour=(150, 0, 0), transparency=155):
++    def __draw_entrance(self, colour=(0, 0, 150), transparency=130):
+ 
+-        x = int(self.__goal[0] * self.CELL_W + 0.5 + 1)
+-        y = int(self.__goal[1] * self.CELL_H + 0.5 + 1)
++        self.__colour_cell(self.entrance, colour=colour, transparency=transparency)
++
++    def __draw_goal(self, colour=(150, 0, 0), transparency=130):
++
++        self.__colour_cell(self.goal, colour=colour, transparency=transparency)
++
++    def __colour_cell(self, cell, colour, transparency):
++
++        if not (isinstance(cell, (list, tuple, np.ndarray)) and len(cell) == 2):
++            raise TypeError("cell must a be a tuple, list, or numpy array of size 2")
++
++        x = int(cell[0] * self.CELL_W + 0.5 + 1)
++        y = int(cell[1] * self.CELL_H + 0.5 + 1)
+         w = int(self.CELL_W + 0.5 - 1)
+         h = int(self.CELL_H + 0.5 - 1)
+         pygame.draw.rect(self.maze_layer, colour + (transparency,), (x, y, w, h))
+@@ -184,6 +201,10 @@ class MazeView2D:
+     def robot(self):
+         return self.__robot
+ 
++    @property
++    def entrance(self):
++        return self.__entrance
++
+     @property
+     def goal(self):
+         return self.__goal
+@@ -206,11 +227,11 @@ class MazeView2D:
+ 
+     @property
+     def CELL_W(self):
+-        return self.SCREEN_W / self.maze.MAZE_W
++        return float(self.SCREEN_W) / float(self.maze.MAZE_W)
+ 
+     @property
+     def CELL_H(self):
+-        return self.SCREEN_H / self.maze.MAZE_H
++        return float(self.SCREEN_H) / float(self.maze.MAZE_H)
+ 
+ 
+ class Maze:
+-- 
+2.25.1
+
+
+From 8858e6e181e6b4017db9b6b1437c28f53eac68ef Mon Sep 17 00:00:00 2001
+From: Matthew Chan <matthew.tk.chan@gmail.com>
+Date: Sat, 8 Oct 2016 01:35:39 -0700
+Subject: [PATCH 06/22] added the ability to break random wall to create loops
+ in the maze.
+
+---
+ gym_maze/envs/maze_view_2d.py | 84 +++++++++++++++++++++++++++++------
+ 1 file changed, 71 insertions(+), 13 deletions(-)
+
+diff --git a/gym_maze/envs/maze_view_2d.py b/gym_maze/envs/maze_view_2d.py
+index cbf25c0..05a23e8 100644
+--- a/gym_maze/envs/maze_view_2d.py
++++ b/gym_maze/envs/maze_view_2d.py
+@@ -6,7 +6,8 @@ import os
+ 
+ class MazeView2D:
+ 
+-    def __init__(self, maze_name="Maze2D", maze_file_path=None,  maze_size=(10, 10), screen_size=(640, 640)):
++    def __init__(self, maze_name="Maze2D", maze_file_path=None,
++                 maze_size=(10, 10), screen_size=(600, 600), has_loops=True):
+ 
+         # PyGame configurations
+         pygame.init()
+@@ -16,7 +17,7 @@ class MazeView2D:
+ 
+         # Load a maze
+         if maze_file_path is None:
+-            self.__maze = Maze(maze_size=maze_size)
++            self.__maze = Maze(maze_size=maze_size, has_loops=has_loops)
+         else:
+             if not os.path.exists(maze_file_path):
+                 dir_path = os.path.dirname(os.path.abspath(__file__))
+@@ -28,7 +29,9 @@ class MazeView2D:
+             self.__maze = Maze(maze_cells=Maze.load_maze(maze_file_path))
+ 
+         self.maze_size = self.__maze.maze_size
++        # to show the right and bottom border
+         self.screen = pygame.display.set_mode(screen_size)
++        self.__screen_size = tuple(map(sum, zip(screen_size, (-1, -1))))
+ 
+         # Set the starting point
+         self.__entrance = np.zeros(2, dtype=int)
+@@ -108,6 +111,7 @@ class MazeView2D:
+             self.__draw_robot()
+             self.__draw_entrance()
+             self.__draw_goal()
++            #self.__draw_maze()
+ 
+             # update the screen
+             self.screen.blit(self.background, (0, 0))
+@@ -120,13 +124,16 @@ class MazeView2D:
+ 
+     def __draw_maze(self):
+ 
++        line_colour = (0, 0, 0, 255)
++
+         # drawing the horizontal lines
+-        for y in range(self.maze.MAZE_H):
+-            pygame.draw.line(self.maze_layer, (0, 0, 0, 255), (0, y * self.CELL_H),
++        for y in range(self.maze.MAZE_H + 1):
++            pygame.draw.line(self.maze_layer, line_colour, (0, y * self.CELL_H),
+                              (self.SCREEN_W, y * self.CELL_H))
++
+         # drawing the vertical lines
+-        for x in range(self.maze.MAZE_W):
+-            pygame.draw.line(self.maze_layer, (0, 0, 0, 255), (x * self.CELL_W, 0),
++        for x in range(self.maze.MAZE_W + 1):
++            pygame.draw.line(self.maze_layer, line_colour, (x * self.CELL_W, 0),
+                              (x * self.CELL_W, self.SCREEN_H))
+ 
+         # breaking the walls
+@@ -215,7 +222,7 @@ class MazeView2D:
+ 
+     @property
+     def SCREEN_SIZE(self):
+-        return tuple(self.screen.get_size())
++        return tuple(self.__screen_size)
+ 
+     @property
+     def SCREEN_W(self):
+@@ -243,10 +250,11 @@ class Maze:
+         "W": (-1, 0)
+     }
+ 
+-    def __init__(self, maze_cells=None, maze_size=(10,10)):
++    def __init__(self, maze_cells=None, maze_size=(10,10), has_loops=True):
+ 
+         # maze member variables
+         self.maze_cells = maze_cells
++        self.has_loops = has_loops
+ 
+         # Use existing one if exists
+         if self.maze_cells is not None:
+@@ -312,6 +320,7 @@ class Maze:
+                 if 0 <= x1 < self.MAZE_W and 0 <= y1 < self.MAZE_H:
+                     # if all four walls still exist
+                     if self.all_walls_intact(self.maze_cells[x1, y1]):
++                    #if self.num_walls_broken(self.maze_cells[x1, y1]) <= 1:
+                         neighbours[dir_key] = (x1, y1)
+ 
+             # if there is a neighbour
+@@ -332,19 +341,51 @@ class Maze:
+                 # increment the visited cell count
+                 num_cells_visited += 1
+ 
+-    def is_open(self, cell, dir):
++        if self.has_loops:
++            self.__break_random_walls(0.2)
++
++    def __break_random_walls(self, percent):
++        # find some random cells to break
++        num_cells = int(round(self.MAZE_H*self.MAZE_W*percent))
++        cell_ids = random.sample(range(self.MAZE_W*self.MAZE_H), num_cells)
++
++        # for each of those walls
++        for cell_id in cell_ids:
++            x = cell_id % self.MAZE_H
++            y = int(cell_id/self.MAZE_H)
++
++            # randomize the compass order
++            dirs = random.sample(list(self.COMPASS.keys()), len(self.COMPASS))
++            for dir in dirs:
++                # break the wall if it's not already open
++                if self.is_breakable((x, y), dir):
++                    self.maze_cells[x, y] = self.__break_walls(self.maze_cells[x, y], dir)
++                    break
++
++    def is_open(self, cell_id, dir):
+         # check if it would be out-of-bound
+-        x1 = cell[0] + self.COMPASS[dir][0]
+-        y1 = cell[1] + self.COMPASS[dir][1]
++        x1 = cell_id[0] + self.COMPASS[dir][0]
++        y1 = cell_id[1] + self.COMPASS[dir][1]
+ 
+         # if cell is still within bounds after the move
+-        if 0 <= x1 < self.MAZE_W and 0 <= y1 < self.MAZE_H:
++        if self.is_within_bound(x1, y1):
+             # check if the wall is opened
+-            this_wall = bool(self.get_walls_status(self.maze_cells[cell[0], cell[1]])[dir])
++            this_wall = bool(self.get_walls_status(self.maze_cells[cell_id[0], cell_id[1]])[dir])
+             other_wall = bool(self.get_walls_status(self.maze_cells[x1, y1])[self.__get_opposite_wall(dir)])
+             return this_wall or other_wall
+         return False
+ 
++    def is_breakable(self, cell_id, dir):
++        # check if it would be out-of-bound
++        x1 = cell_id[0] + self.COMPASS[dir][0]
++        y1 = cell_id[1] + self.COMPASS[dir][1]
++
++        return not self.is_open(cell_id, dir) and self.is_within_bound(x1, y1)
++
++    def is_within_bound(self, x, y):
++        # true if cell is still within bounds after the move
++        return 0 <= x < self.MAZE_W and 0 <= y < self.MAZE_H
++
+     @property
+     def MAZE_W(self):
+         return int(self.maze_size[0])
+@@ -367,6 +408,14 @@ class Maze:
+     def all_walls_intact(cls, cell):
+         return cell & 0xF == 0
+ 
++    @classmethod
++    def num_walls_broken(cls, cell):
++        walls = cls.get_walls_status(cell)
++        num_broken = 0
++        for wall_broken in walls.values():
++            num_broken += wall_broken
++        return num_broken
++
+     @classmethod
+     def __break_walls(cls, cell, dirs):
+         if "N" in dirs:
+@@ -402,3 +451,12 @@ class Maze:
+             opposite_dirs += opposite_dir
+ 
+         return opposite_dirs
++
++
++if __name__ == "__main__":
++
++    maze = MazeView2D(screen_size= (500, 500), maze_size=(10,10))
++    maze.update()
++    input("Enter any key to quit.")
++
++
+-- 
+2.25.1
+
+
+From ba623beb09b5af95171f37173961e7bcb34d4aa6 Mon Sep 17 00:00:00 2001
+From: Matthew Chan <matthew.tk.chan@gmail.com>
+Date: Thu, 13 Oct 2016 00:19:06 -0700
+Subject: [PATCH 07/22] Added portals to the maze.
+
+---
+ gym_maze/__init__.py          |  21 +++++++
+ gym_maze/envs/maze_env.py     |  29 ++++++++-
+ gym_maze/envs/maze_view_2d.py | 107 +++++++++++++++++++++++++++++++---
+ setup.py                      |   2 +-
+ 4 files changed, 148 insertions(+), 11 deletions(-)
+
+diff --git a/gym_maze/__init__.py b/gym_maze/__init__.py
+index 37536d0..e8345c8 100644
+--- a/gym_maze/__init__.py
++++ b/gym_maze/__init__.py
+@@ -59,3 +59,24 @@ register(
+     timestep_limit=1000000,
+     nondeterministic=True,
+ )
++
++register(
++    id='maze-random-10x10-plus-v0',
++    entry_point='gym_maze.envs:MazeEnvRandom10x10Plus',
++    timestep_limit=1000000,
++    nondeterministic=True,
++)
++
++register(
++    id='maze-random-20x20-plus-v0',
++    entry_point='gym_maze.envs:MazeEnvRandom20x20Plus',
++    timestep_limit=1000000,
++    nondeterministic=True,
++)
++
++register(
++    id='maze-random-30x30-plus-v0',
++    entry_point='gym_maze.envs:MazeEnvRandom30x30Plus',
++    timestep_limit=1000000,
++    nondeterministic=True,
++)
+diff --git a/gym_maze/envs/maze_env.py b/gym_maze/envs/maze_env.py
+index 09896c5..25d6a2d 100644
+--- a/gym_maze/envs/maze_env.py
++++ b/gym_maze/envs/maze_env.py
+@@ -13,7 +13,7 @@ class MazeEnv(gym.Env):
+ 
+     ACTION = ["N", "S", "E", "W"]
+ 
+-    def __init__(self, maze_file=None, maze_size=None):
++    def __init__(self, maze_file=None, maze_size=None, mode=None):
+ 
+         self.viewer = None
+ 
+@@ -22,9 +22,16 @@ class MazeEnv(gym.Env):
+                                         maze_file_path=maze_file,
+                                         screen_size=(640, 640))
+         elif maze_size:
++            if mode == "plus":
++                has_loops = True
++                num_portals = int(round(min(maze_size)/3))
++            else:
++                has_loops = False
++                num_portals = 0
++
+             self.maze_view = MazeView2D(maze_name="OpenAI Gym - Maze (%d x %d)" % maze_size,
+-                                        maze_size=maze_size,
+-                                        screen_size=(640, 640))
++                                        maze_size=maze_size, screen_size=(640, 640),
++                                        has_loops=has_loops, num_portals=num_portals)
+         else:
+             raise AttributeError("One must supply either a maze_file path (str) or the maze_size (tuple of length 2)")
+ 
+@@ -142,3 +149,19 @@ class MazeEnvRandom100x100(MazeEnv):
+     def __init__(self):
+         super(MazeEnvRandom100x100, self).__init__(maze_size=(100, 100))
+ 
++
++class MazeEnvRandom10x10Plus(MazeEnv):
++
++    def __init__(self):
++        super(MazeEnvRandom10x10Plus, self).__init__(maze_size=(10, 10), mode="plus")
++
++
++class MazeEnvRandom20x20Plus(MazeEnv):
++
++    def __init__(self):
++        super(MazeEnvRandom20x20Plus, self).__init__(maze_size=(20, 20), mode="plus")
++
++
++class MazeEnvRandom30x30Plus(MazeEnv):
++    def __init__(self):
++        super(MazeEnvRandom30x30Plus, self).__init__(maze_size=(30, 30), mode="plus")
+diff --git a/gym_maze/envs/maze_view_2d.py b/gym_maze/envs/maze_view_2d.py
+index 05a23e8..5e334d1 100644
+--- a/gym_maze/envs/maze_view_2d.py
++++ b/gym_maze/envs/maze_view_2d.py
+@@ -7,7 +7,8 @@ import os
+ class MazeView2D:
+ 
+     def __init__(self, maze_name="Maze2D", maze_file_path=None,
+-                 maze_size=(10, 10), screen_size=(600, 600), has_loops=True):
++                 maze_size=(30, 30), screen_size=(600, 600),
++                 has_loops=False, num_portals=0):
+ 
+         # PyGame configurations
+         pygame.init()
+@@ -17,7 +18,7 @@ class MazeView2D:
+ 
+         # Load a maze
+         if maze_file_path is None:
+-            self.__maze = Maze(maze_size=maze_size, has_loops=has_loops)
++            self.__maze = Maze(maze_size=maze_size, has_loops=has_loops, num_portals=num_portals)
+         else:
+             if not os.path.exists(maze_file_path):
+                 dir_path = os.path.dirname(os.path.abspath(__file__))
+@@ -53,6 +54,9 @@ class MazeView2D:
+         # show the maze
+         self.__draw_maze()
+ 
++        # show the portals
++        self.__draw_portals()
++
+         # show the robot
+         self.__draw_robot()
+ 
+@@ -87,9 +91,15 @@ class MazeView2D:
+                              % (str(dir), str(self.__maze.COMPASS.keys())))
+ 
+         if self.__maze.is_open(self.__robot, dir):
++
+             # update the drawing
+             self.__draw_robot(transparency=0)
++
++            # move the robot
+             self.__robot += np.array(self.__maze.COMPASS[dir])
++            # if it's in a portal afterward
++            if self.maze.is_portal(self.robot):
++                self.__robot = np.array(self.maze.get_portal(tuple(self.robot)).teleport(tuple(self.robot)))
+             self.__draw_robot(transparency=255)
+ 
+     def reset_robot(self):
+@@ -108,10 +118,11 @@ class MazeView2D:
+     def __view_update(self, mode="human"):
+         if not self.__game_over:
+             # update the robot's position
+-            self.__draw_robot()
+             self.__draw_entrance()
+             self.__draw_goal()
+-            #self.__draw_maze()
++            self.__draw_portals()
++            self.__draw_robot()
++
+ 
+             # update the screen
+             self.screen.blit(self.background, (0, 0))
+@@ -181,14 +192,24 @@ class MazeView2D:
+ 
+         pygame.draw.circle(self.maze_layer, colour + (transparency,), (x, y), r)
+ 
+-    def __draw_entrance(self, colour=(0, 0, 150), transparency=130):
++    def __draw_entrance(self, colour=(0, 0, 150), transparency=235):
+ 
+         self.__colour_cell(self.entrance, colour=colour, transparency=transparency)
+ 
+-    def __draw_goal(self, colour=(150, 0, 0), transparency=130):
++    def __draw_goal(self, colour=(150, 0, 0), transparency=235):
+ 
+         self.__colour_cell(self.goal, colour=colour, transparency=transparency)
+ 
++    def __draw_portals(self, transparency=160):
++
++        colour_range = np.linspace(0, 255, len(self.maze.portals), dtype=int)
++        colour_i = 0
++        for portal in self.maze.portals:
++            colour = ((100 - colour_range[colour_i])% 255, colour_range[colour_i], 0)
++            colour_i += 1
++            for location in portal.locations:
++                self.__colour_cell(location, colour=colour, transparency=transparency)
++
+     def __colour_cell(self, cell, colour, transparency):
+ 
+         if not (isinstance(cell, (list, tuple, np.ndarray)) and len(cell) == 2):
+@@ -250,11 +271,14 @@ class Maze:
+         "W": (-1, 0)
+     }
+ 
+-    def __init__(self, maze_cells=None, maze_size=(10,10), has_loops=True):
++    def __init__(self, maze_cells=None, maze_size=(10,10), has_loops=True, num_portals=0):
+ 
+         # maze member variables
+         self.maze_cells = maze_cells
+         self.has_loops = has_loops
++        self.__portals_dict = dict()
++        self.__portals = []
++        self.num_portals = num_portals
+ 
+         # Use existing one if exists
+         if self.maze_cells is not None:
+@@ -344,6 +368,9 @@ class Maze:
+         if self.has_loops:
+             self.__break_random_walls(0.2)
+ 
++        if self.num_portals > 0:
++            self.__set_random_portals(num_portal_sets=self.num_portals, set_size=2)
++
+     def __break_random_walls(self, percent):
+         # find some random cells to break
+         num_cells = int(round(self.MAZE_H*self.MAZE_W*percent))
+@@ -362,6 +389,37 @@ class Maze:
+                     self.maze_cells[x, y] = self.__break_walls(self.maze_cells[x, y], dir)
+                     break
+ 
++    def __set_random_portals(self, num_portal_sets, set_size=2):
++        # find some random cells to break
++        num_portal_sets = int(num_portal_sets)
++        set_size = int(set_size)
++
++        # limit the maximum number of portal sets to the number of cells available.
++        max_portal_sets = int(self.MAZE_W * self.MAZE_H / set_size)
++        num_portal_sets = min(max_portal_sets, num_portal_sets)
++
++        # the first and last cells are reserved
++        cell_ids = random.sample(range(1, self.MAZE_W * self.MAZE_H - 1), num_portal_sets*set_size)
++
++        for i in range(num_portal_sets):
++            # sample the set_size number of sell
++            portal_cell_ids = random.sample(cell_ids, set_size)
++            portal_locations = []
++            for portal_cell_id in portal_cell_ids:
++                # remove the cell from the set of potential cell_ids
++                cell_ids.pop(cell_ids.index(portal_cell_id))
++                # convert portal ids to location
++                x = portal_cell_id % self.MAZE_H
++                y = int(portal_cell_id / self.MAZE_H)
++                portal_locations.append((x,y))
++            # append the new portal to the maze
++            portal = Portal(*portal_locations)
++            self.__portals.append(portal)
++
++            # create a dictionary of portals
++            for portal_location in portal_locations:
++                self.__portals_dict[portal_location] = portal
++
+     def is_open(self, cell_id, dir):
+         # check if it would be out-of-bound
+         x1 = cell_id[0] + self.COMPASS[dir][0]
+@@ -386,6 +444,18 @@ class Maze:
+         # true if cell is still within bounds after the move
+         return 0 <= x < self.MAZE_W and 0 <= y < self.MAZE_H
+ 
++    def is_portal(self, cell):
++        return tuple(cell) in self.__portals_dict
++
++    @property
++    def portals(self):
++        return tuple(self.__portals)
++
++    def get_portal(self, cell):
++        if cell in self.__portals_dict:
++            return self.__portals_dict[cell]
++        return None
++
+     @property
+     def MAZE_W(self):
+         return int(self.maze_size[0])
+@@ -452,6 +522,29 @@ class Maze:
+ 
+         return opposite_dirs
+ 
++class Portal:
++
++    def __init__(self, *locations):
++
++        self.__locations = []
++        for location in locations:
++            if isinstance(location, (tuple, list)):
++                self.__locations.append(tuple(location))
++            else:
++                raise ValueError("location must be a list or a tuple.")
++
++    def teleport(self, cell):
++        if cell in self.locations:
++            return self.locations[(self.locations.index(cell) + 1) % len(self.locations)]
++        return cell
++
++    def get_index(self, cell):
++        return self.locations.index(cell)
++
++    @property
++    def locations(self):
++        return self.__locations
++
+ 
+ if __name__ == "__main__":
+ 
+diff --git a/setup.py b/setup.py
+index ac55d1b..4c7fe40 100644
+--- a/setup.py
++++ b/setup.py
+@@ -1,7 +1,7 @@
+ from setuptools import setup
+ 
+ setup(name="gym_maze",
+-      version="0.3",
++      version="0.4",
+       url="https://github.com/tuzzer/gym-maze",
+       author="Matthew T.K. Chan",
+       license="MIT",
+-- 
+2.25.1
+
+
+From a01361653a06bd2021a628d0597eb40f1c0cdce7 Mon Sep 17 00:00:00 2001
+From: Matthew Chan <matthew.tk.chan@gmail.com>
+Date: Sun, 30 Oct 2016 17:04:02 -0700
+Subject: [PATCH 08/22] Update README.md
+
+---
+ README.md | 44 ++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 44 insertions(+)
+
+diff --git a/README.md b/README.md
+index e69de29..dafee35 100644
+--- a/README.md
++++ b/README.md
+@@ -0,0 +1,44 @@
++# gym-maze
++
++A simple 2D maze environment where an agent (blue dot) finds its way from the top left corner (blue square) to the goal at the bottom right corner (red square). 
++The objective is to find the shortest path from the start to the goal.
++
++### Action space
++The agent may only choose to go up, down, left, or right. If the way is blocked, it will remain at the same the location. 
++
++### Observation space
++The observation space is the (x, y) coordinate of the agent. The top left cell is (0, 0). 
++
++### Reward
++A reward of 1 is given when the agent reaches the goal. For every step in the maze, the agent recieves a reward of -0.1/(number of cells).i
++
++### End condition
++The maze is reset when the agent reaches the goal. 
++
++## Maze Versions
++
++### Pre-generated mazes
++* 3 cells x 3 cells: _MazeEnvSample3x3_
++* 5 cells x 5 cells: _MazeEnvSample5x5_
++* 10 cells x 10 cells: _MazeEnvSample10x10_
++* 100 cells x 100 cells: _MazeEnvSample100x100_
++
++### Randomly generated mazes (same maze every epoch)
++* 3 cells x 3 cells: _MazeEnvRandom3x3_
++* 5 cells x 5 cells: _MazeEnvRandom5x5_
++* 10 cells x 10 cells: _MazeEnvRandom10x10_
++* 100 cells x 100 cells: _MazeEnvRandom100x100_
++
++### Randomly generated mazes with portals and loops
++With loops, it means that there will be more than one possible path.
++The agent can also teleport from a portal to another portal of the same colour. 
++* 10 cells x 10 cells: _MazeEnvRandom10x10Plus_
++* 20 cells x 20 cells: _MazeEnvRandom20x20Plus_
++* 30 cells x 30 cells: _MazeEnvRandom30x30Plus_
++
++# Installation
++
++```bash
++cd gym-maze
++python setup.py install
++```
+-- 
+2.25.1
+
+
+From a01e175e16fafb7595c6e5e72cbfa670a33b77d3 Mon Sep 17 00:00:00 2001
+From: Matthew Chan <matthew.tk.chan@gmail.com>
+Date: Sun, 30 Oct 2016 17:10:27 -0700
+Subject: [PATCH 09/22] Update README.md
+
+---
+ README.md | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/README.md b/README.md
+index dafee35..aacb51d 100644
+--- a/README.md
++++ b/README.md
+@@ -4,13 +4,13 @@ A simple 2D maze environment where an agent (blue dot) finds its way from the to
+ The objective is to find the shortest path from the start to the goal.
+ 
+ ### Action space
+-The agent may only choose to go up, down, left, or right. If the way is blocked, it will remain at the same the location. 
++The agent may only choose to go up, down, left, or right ("N", "S", "W", "E"). If the way is blocked, it will remain at the same the location. 
+ 
+ ### Observation space
+-The observation space is the (x, y) coordinate of the agent. The top left cell is (0, 0). 
++The observation space is the (x, y) coordinate of the agent. The top left cell is (0, 0).
+ 
+ ### Reward
+-A reward of 1 is given when the agent reaches the goal. For every step in the maze, the agent recieves a reward of -0.1/(number of cells).i
++A reward of 1 is given when the agent reaches the goal. For every step in the maze, the agent recieves a reward of -0.1/(number of cells).
+ 
+ ### End condition
+ The maze is reset when the agent reaches the goal. 
+@@ -37,6 +37,7 @@ The agent can also teleport from a portal to another portal of the same colour.
+ * 30 cells x 30 cells: _MazeEnvRandom30x30Plus_
+ 
+ # Installation
++It should work on both Python 2.7+ and 3.4+. It requires pygame and numpy. 
+ 
+ ```bash
+ cd gym-maze
+-- 
+2.25.1
+
+
+From 69c4d497544d25a4d47d71d602fd61e83075293f Mon Sep 17 00:00:00 2001
+From: Matthew Chan <matthew.tk.chan@gmail.com>
+Date: Sun, 30 Oct 2016 17:25:33 -0700
+Subject: [PATCH 10/22] Update README.md
+
+---
+ README.md | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/README.md b/README.md
+index aacb51d..b584bbc 100644
+--- a/README.md
++++ b/README.md
+@@ -3,6 +3,8 @@
+ A simple 2D maze environment where an agent (blue dot) finds its way from the top left corner (blue square) to the goal at the bottom right corner (red square). 
+ The objective is to find the shortest path from the start to the goal.
+ 
++![Simple 2D maze environment](http://i.giphy.com/Ar3aKxkAAh3y0.gif)
++
+ ### Action space
+ The agent may only choose to go up, down, left, or right ("N", "S", "W", "E"). If the way is blocked, it will remain at the same the location. 
+ 
+@@ -43,3 +45,8 @@ It should work on both Python 2.7+ and 3.4+. It requires pygame and numpy.
+ cd gym-maze
+ python setup.py install
+ ```
++# Examples
++An example of finding the shortest path through the maze using Q-learning can be found here: https://github.com/tuzzer/ai-gym/blob/master/maze_2d/maze_2d_q_learning.py
++
++![Solving 20x20 maze with loops and portals using Q-Learning](http://i.giphy.com/rfazKQngdaja8.gif)
++
+-- 
+2.25.1
+
+
+From 118cece9dcba8789e25bfe347e622c2234946fa9 Mon Sep 17 00:00:00 2001
+From: Matthew Chan <matthew.tk.chan@gmail.com>
+Date: Sun, 30 Oct 2016 17:26:51 -0700
+Subject: [PATCH 11/22] Update README.md
+
+Added border to the gif
+---
+ README.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/README.md b/README.md
+index b584bbc..631f136 100644
+--- a/README.md
++++ b/README.md
+@@ -3,7 +3,7 @@
+ A simple 2D maze environment where an agent (blue dot) finds its way from the top left corner (blue square) to the goal at the bottom right corner (red square). 
+ The objective is to find the shortest path from the start to the goal.
+ 
+-![Simple 2D maze environment](http://i.giphy.com/Ar3aKxkAAh3y0.gif)
++<kbd>![Simple 2D maze environment](http://i.giphy.com/Ar3aKxkAAh3y0.gif)</kbd>
+ 
+ ### Action space
+ The agent may only choose to go up, down, left, or right ("N", "S", "W", "E"). If the way is blocked, it will remain at the same the location. 
+-- 
+2.25.1
+
+
+From aa5c7be588684aff82bb8a90446ca32bc98ca500 Mon Sep 17 00:00:00 2001
+From: Matthew Chan <matthew.tk.chan@gmail.com>
+Date: Sun, 30 Oct 2016 17:46:31 -0700
+Subject: [PATCH 12/22] Update README.md
+
+---
+ README.md | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/README.md b/README.md
+index 631f136..58e3516 100644
+--- a/README.md
++++ b/README.md
+@@ -38,14 +38,14 @@ The agent can also teleport from a portal to another portal of the same colour.
+ * 20 cells x 20 cells: _MazeEnvRandom20x20Plus_
+ * 30 cells x 30 cells: _MazeEnvRandom30x30Plus_
+ 
+-# Installation
++## Installation
+ It should work on both Python 2.7+ and 3.4+. It requires pygame and numpy. 
+ 
+ ```bash
+ cd gym-maze
+ python setup.py install
+ ```
+-# Examples
++## Examples
+ An example of finding the shortest path through the maze using Q-learning can be found here: https://github.com/tuzzer/ai-gym/blob/master/maze_2d/maze_2d_q_learning.py
+ 
+ ![Solving 20x20 maze with loops and portals using Q-Learning](http://i.giphy.com/rfazKQngdaja8.gif)
+-- 
+2.25.1
+
+
+From 95a0fa3c1f8e54e4b358a25272faea2811df42a1 Mon Sep 17 00:00:00 2001
+From: Mostafa Rafaie <mostafa.rafaie@gmail.com>
+Date: Mon, 14 Jan 2019 08:48:09 -0600
+Subject: [PATCH 13/22] Resolve a bug
+
+reset() -> _reset()
+---
+ gym_maze/envs/maze_env.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/gym_maze/envs/maze_env.py b/gym_maze/envs/maze_env.py
+index 25d6a2d..24f1b83 100644
+--- a/gym_maze/envs/maze_env.py
++++ b/gym_maze/envs/maze_env.py
+@@ -51,7 +51,7 @@ class MazeEnv(gym.Env):
+ 
+         # Simulation related variables.
+         self._seed()
+-        self.reset()
++        self._reset()
+ 
+         # Just need to initialize the relevant attributes
+         self._configure()
+-- 
+2.25.1
+
+
+From b4dc3a66bdc18d7fdac779ee1889c09b64bd3a07 Mon Sep 17 00:00:00 2001
+From: Mostafa Rafaie <mostafa.rafaie@gmail.com>
+Date: Mon, 14 Jan 2019 13:10:54 -0600
+Subject: [PATCH 14/22] Update maze_env.py
+
+---
+ gym_maze/envs/maze_env.py | 18 +++++++++---------
+ 1 file changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/gym_maze/envs/maze_env.py b/gym_maze/envs/maze_env.py
+index 24f1b83..22bf769 100644
+--- a/gym_maze/envs/maze_env.py
++++ b/gym_maze/envs/maze_env.py
+@@ -43,30 +43,30 @@ class MazeEnv(gym.Env):
+         # observation is the x, y coordinate of the grid
+         low = np.zeros(len(self.maze_size), dtype=int)
+         high =  np.array(self.maze_size, dtype=int) - np.ones(len(self.maze_size), dtype=int)
+-        self.observation_space = spaces.Box(low, high)
++        self.observation_space = spaces.Box(low, high, dtype=np.int64)
+ 
+         # initial condition
+         self.state = None
+         self.steps_beyond_done = None
+ 
+         # Simulation related variables.
+-        self._seed()
+-        self._reset()
++        self.seed()
++        self.reset()
+ 
+         # Just need to initialize the relevant attributes
+-        self._configure()
++        self.configure()
+ 
+     def __del__(self):
+         self.maze_view.quit_game()
+ 
+-    def _configure(self, display=None):
++    def configure(self, display=None):
+         self.display = display
+ 
+-    def _seed(self, seed=None):
++    def seed(self, seed=None):
+         self.np_random, seed = seeding.np_random(seed)
+         return [seed]
+ 
+-    def _step(self, action):
++    def step(self, action):
+         if isinstance(action, int):
+             self.maze_view.move_robot(self.ACTION[action])
+         else:
+@@ -85,7 +85,7 @@ class MazeEnv(gym.Env):
+ 
+         return self.state, reward, done, info
+ 
+-    def _reset(self):
++    def reset(self):
+         self.maze_view.reset_robot()
+         self.state = np.zeros(2)
+         self.steps_beyond_done = None
+@@ -95,7 +95,7 @@ class MazeEnv(gym.Env):
+     def is_game_over(self):
+         return self.maze_view.game_over
+ 
+-    def _render(self, mode="human", close=False):
++    def render(self, mode="human", close=False):
+         if close:
+             self.maze_view.quit_game()
+ 
+-- 
+2.25.1
+
+
+From a0532f4594ca7c6cd5231d0b4e2c8d12af17de8c Mon Sep 17 00:00:00 2001
+From: Rafaiejokandan <req93271@c02pvt35g8wp.corp.mutualofomaha.com>
+Date: Tue, 12 Feb 2019 10:50:29 -0600
+Subject: [PATCH 15/22] Add enable_render param to be able run without
+ visualization
+
+---
+ gym_maze/envs/maze_env.py     |  6 ++++--
+ gym_maze/envs/maze_view_2d.py | 30 ++++++++++++++++++++++++------
+ 2 files changed, 28 insertions(+), 8 deletions(-)
+
+diff --git a/gym_maze/envs/maze_env.py b/gym_maze/envs/maze_env.py
+index 22bf769..36da601 100644
+--- a/gym_maze/envs/maze_env.py
++++ b/gym_maze/envs/maze_env.py
+@@ -13,14 +13,16 @@ class MazeEnv(gym.Env):
+ 
+     ACTION = ["N", "S", "E", "W"]
+ 
+-    def __init__(self, maze_file=None, maze_size=None, mode=None):
++    def __init__(self, maze_file=None, maze_size=None, mode=None, enable_render=True):
+ 
+         self.viewer = None
++        self.enable_render = enable_render
+ 
+         if maze_file:
+             self.maze_view = MazeView2D(maze_name="OpenAI Gym - Maze (%s)" % maze_file,
+                                         maze_file_path=maze_file,
+-                                        screen_size=(640, 640))
++                                        screen_size=(640, 640), 
++                                        enable_render=enable_render)
+         elif maze_size:
+             if mode == "plus":
+                 has_loops = True
+diff --git a/gym_maze/envs/maze_view_2d.py b/gym_maze/envs/maze_view_2d.py
+index 5e334d1..7b86e62 100644
+--- a/gym_maze/envs/maze_view_2d.py
++++ b/gym_maze/envs/maze_view_2d.py
+@@ -8,13 +8,14 @@ class MazeView2D:
+ 
+     def __init__(self, maze_name="Maze2D", maze_file_path=None,
+                  maze_size=(30, 30), screen_size=(600, 600),
+-                 has_loops=False, num_portals=0):
++                 has_loops=False, num_portals=0, enable_render=True):
+ 
+         # PyGame configurations
+         pygame.init()
+         pygame.display.set_caption(maze_name)
+         self.clock = pygame.time.Clock()
+         self.__game_over = False
++        self.__enable_render = enable_render
+ 
+         # Load a maze
+         if maze_file_path is None:
+@@ -30,9 +31,10 @@ class MazeView2D:
+             self.__maze = Maze(maze_cells=Maze.load_maze(maze_file_path))
+ 
+         self.maze_size = self.__maze.maze_size
+-        # to show the right and bottom border
+-        self.screen = pygame.display.set_mode(screen_size)
+-        self.__screen_size = tuple(map(sum, zip(screen_size, (-1, -1))))
++        if self.__enable_render is True:
++            # to show the right and bottom border
++            self.screen = pygame.display.set_mode(screen_size)
++            self.__screen_size = tuple(map(sum, zip(screen_size, (-1, -1))))
+ 
+         # Set the starting point
+         self.__entrance = np.zeros(2, dtype=int)
+@@ -80,7 +82,8 @@ class MazeView2D:
+     def quit_game(self):
+         try:
+             self.__game_over = True
+-            pygame.display.quit()
++            if self.__enable_render is True:
++                pygame.display.quit()
+             pygame.quit()
+         except Exception:
+             pass
+@@ -134,7 +137,10 @@ class MazeView2D:
+             return np.flipud(np.rot90(pygame.surfarray.array3d(pygame.display.get_surface())))
+ 
+     def __draw_maze(self):
+-
++        
++        if self.__enable_render is False:
++            return
++        
+         line_colour = (0, 0, 0, 255)
+ 
+         # drawing the horizontal lines
+@@ -160,6 +166,9 @@ class MazeView2D:
+ 
+     def __cover_walls(self, x, y, dirs, colour=(0, 0, 255, 15)):
+ 
++        if self.__enable_render is False:
++            return
++        
+         dx = x * self.CELL_W
+         dy = y * self.CELL_H
+ 
+@@ -186,6 +195,9 @@ class MazeView2D:
+ 
+     def __draw_robot(self, colour=(0, 0, 150), transparency=255):
+ 
++        if self.__enable_render is False:
++            return
++        
+         x = int(self.__robot[0] * self.CELL_W + self.CELL_W * 0.5 + 0.5)
+         y = int(self.__robot[1] * self.CELL_H + self.CELL_H * 0.5 + 0.5)
+         r = int(min(self.CELL_W, self.CELL_H)/5 + 0.5)
+@@ -202,6 +214,9 @@ class MazeView2D:
+ 
+     def __draw_portals(self, transparency=160):
+ 
++        if self.__enable_render is False:
++            return
++        
+         colour_range = np.linspace(0, 255, len(self.maze.portals), dtype=int)
+         colour_i = 0
+         for portal in self.maze.portals:
+@@ -212,6 +227,9 @@ class MazeView2D:
+ 
+     def __colour_cell(self, cell, colour, transparency):
+ 
++        if self.__enable_render is False:
++            return
++
+         if not (isinstance(cell, (list, tuple, np.ndarray)) and len(cell) == 2):
+             raise TypeError("cell must a be a tuple, list, or numpy array of size 2")
+ 
+-- 
+2.25.1
+
+
+From 770a6b71703b79b15d78c3b130db50f83e218f0f Mon Sep 17 00:00:00 2001
+From: Rafaiejokandan <req93271@c02pvt35g8wp.corp.mutualofomaha.com>
+Date: Tue, 12 Feb 2019 12:14:14 -0600
+Subject: [PATCH 16/22] Add param to main classes
+
+---
+ gym_maze/envs/maze_env.py | 44 +++++++++++++++++++--------------------
+ 1 file changed, 22 insertions(+), 22 deletions(-)
+
+diff --git a/gym_maze/envs/maze_env.py b/gym_maze/envs/maze_env.py
+index 36da601..9a881a7 100644
+--- a/gym_maze/envs/maze_env.py
++++ b/gym_maze/envs/maze_env.py
+@@ -106,64 +106,64 @@ class MazeEnv(gym.Env):
+ 
+ class MazeEnvSample5x5(MazeEnv):
+ 
+-    def __init__(self):
+-        super(MazeEnvSample5x5, self).__init__(maze_file="maze2d_5x5.npy")
++    def __init__(self, enable_render=True):
++        super(MazeEnvSample5x5, self).__init__(maze_file="maze2d_5x5.npy", enable_render=enable_render)
+ 
+ 
+ class MazeEnvRandom5x5(MazeEnv):
+ 
+-    def __init__(self):
+-        super(MazeEnvRandom5x5, self).__init__(maze_size=(5, 5))
++    def __init__(self, enable_render=True):
++        super(MazeEnvRandom5x5, self).__init__(maze_size=(5, 5), enable_render=enable_render)
+ 
+ 
+ class MazeEnvSample10x10(MazeEnv):
+ 
+-    def __init__(self):
+-        super(MazeEnvSample10x10, self).__init__(maze_file="maze2d_10x10.npy")
++    def __init__(self, enable_render=True):
++        super(MazeEnvSample10x10, self).__init__(maze_file="maze2d_10x10.npy", enable_render=enable_render)
+ 
+ 
+ class MazeEnvRandom10x10(MazeEnv):
+ 
+-    def __init__(self):
+-        super(MazeEnvRandom10x10, self).__init__(maze_size=(10, 10))
++    def __init__(self, enable_render=True):
++        super(MazeEnvRandom10x10, self).__init__(maze_size=(10, 10), enable_render=enable_render)
+ 
+ 
+ class MazeEnvSample3x3(MazeEnv):
+ 
+-    def __init__(self):
+-        super(MazeEnvSample3x3, self).__init__(maze_file="maze2d_3x3.npy")
++    def __init__(self, enable_render=True):
++        super(MazeEnvSample3x3, self).__init__(maze_file="maze2d_3x3.npy", enable_render=enable_render)
+ 
+ 
+ class MazeEnvRandom3x3(MazeEnv):
+ 
+-    def __init__(self):
+-        super(MazeEnvRandom3x3, self).__init__(maze_size=(3, 3))
++    def __init__(self, enable_render=True):
++        super(MazeEnvRandom3x3, self).__init__(maze_size=(3, 3), enable_render=enable_render)
+ 
+ 
+ class MazeEnvSample100x100(MazeEnv):
+ 
+-    def __init__(self):
+-        super(MazeEnvSample100x100, self).__init__(maze_file="maze2d_100x100.npy")
++    def __init__(self, enable_render=True):
++        super(MazeEnvSample100x100, self).__init__(maze_file="maze2d_100x100.npy", enable_render=enable_render)
+ 
+ 
+ class MazeEnvRandom100x100(MazeEnv):
+ 
+-    def __init__(self):
+-        super(MazeEnvRandom100x100, self).__init__(maze_size=(100, 100))
++    def __init__(self, enable_render=True):
++        super(MazeEnvRandom100x100, self).__init__(maze_size=(100, 100), enable_render=enable_render)
+ 
+ 
+ class MazeEnvRandom10x10Plus(MazeEnv):
+ 
+-    def __init__(self):
+-        super(MazeEnvRandom10x10Plus, self).__init__(maze_size=(10, 10), mode="plus")
++    def __init__(self, enable_render=True):
++        super(MazeEnvRandom10x10Plus, self).__init__(maze_size=(10, 10), mode="plus", enable_render=enable_render)
+ 
+ 
+ class MazeEnvRandom20x20Plus(MazeEnv):
+ 
+-    def __init__(self):
+-        super(MazeEnvRandom20x20Plus, self).__init__(maze_size=(20, 20), mode="plus")
++    def __init__(self, enable_render=True):
++        super(MazeEnvRandom20x20Plus, self).__init__(maze_size=(20, 20), mode="plus", enable_render=enable_render)
+ 
+ 
+ class MazeEnvRandom30x30Plus(MazeEnv):
+-    def __init__(self):
+-        super(MazeEnvRandom30x30Plus, self).__init__(maze_size=(30, 30), mode="plus")
++    def __init__(self, enable_render=True):
++        super(MazeEnvRandom30x30Plus, self).__init__(maze_size=(30, 30), mode="plus", enable_render=enable_render)
+-- 
+2.25.1
+
+
+From 1884e99e79ad44b87771709a448c4ff8fb5042e7 Mon Sep 17 00:00:00 2001
+From: Rafaiejokandan <req93271@c02pvt35g8wp.corp.mutualofomaha.com>
+Date: Tue, 12 Feb 2019 12:17:34 -0600
+Subject: [PATCH 17/22] Resolve a bug
+
+---
+ gym_maze/envs/maze_env.py | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/gym_maze/envs/maze_env.py b/gym_maze/envs/maze_env.py
+index 9a881a7..39f10d6 100644
+--- a/gym_maze/envs/maze_env.py
++++ b/gym_maze/envs/maze_env.py
+@@ -59,7 +59,8 @@ class MazeEnv(gym.Env):
+         self.configure()
+ 
+     def __del__(self):
+-        self.maze_view.quit_game()
++        if self.enable_render is True:
++            self.maze_view.quit_game()
+ 
+     def configure(self, display=None):
+         self.display = display
+-- 
+2.25.1
+
+
+From 06be48d91b44c2d001c4912d28c08b13d92c06de Mon Sep 17 00:00:00 2001
+From: Rafaiejokandan <req93271@c02pvt35g8wp.corp.mutualofomaha.com>
+Date: Tue, 12 Feb 2019 12:29:39 -0600
+Subject: [PATCH 18/22] resolved a bug
+
+---
+ gym_maze/envs/maze_env.py     |  3 ++-
+ gym_maze/envs/maze_view_2d.py | 33 +++++++++++++++++----------------
+ 2 files changed, 19 insertions(+), 17 deletions(-)
+
+diff --git a/gym_maze/envs/maze_env.py b/gym_maze/envs/maze_env.py
+index 39f10d6..9076f2a 100644
+--- a/gym_maze/envs/maze_env.py
++++ b/gym_maze/envs/maze_env.py
+@@ -33,7 +33,8 @@ class MazeEnv(gym.Env):
+ 
+             self.maze_view = MazeView2D(maze_name="OpenAI Gym - Maze (%d x %d)" % maze_size,
+                                         maze_size=maze_size, screen_size=(640, 640),
+-                                        has_loops=has_loops, num_portals=num_portals)
++                                        has_loops=has_loops, num_portals=num_portals,
++                                        enable_render=enable_render)
+         else:
+             raise AttributeError("One must supply either a maze_file path (str) or the maze_size (tuple of length 2)")
+ 
+diff --git a/gym_maze/envs/maze_view_2d.py b/gym_maze/envs/maze_view_2d.py
+index 7b86e62..0be08f1 100644
+--- a/gym_maze/envs/maze_view_2d.py
++++ b/gym_maze/envs/maze_view_2d.py
+@@ -45,28 +45,29 @@ class MazeView2D:
+         # Create the Robot
+         self.__robot = self.entrance
+ 
+-        # Create a background
+-        self.background = pygame.Surface(self.screen.get_size()).convert()
+-        self.background.fill((255, 255, 255))
++        if self.__enable_render is True:
++            # Create a background
++            self.background = pygame.Surface(self.screen.get_size()).convert()
++            self.background.fill((255, 255, 255))
+ 
+-        # Create a layer for the maze
+-        self.maze_layer = pygame.Surface(self.screen.get_size()).convert_alpha()
+-        self.maze_layer.fill((0, 0, 0, 0,))
++            # Create a layer for the maze
++            self.maze_layer = pygame.Surface(self.screen.get_size()).convert_alpha()
++            self.maze_layer.fill((0, 0, 0, 0,))
+ 
+-        # show the maze
+-        self.__draw_maze()
++            # show the maze
++            self.__draw_maze()
+ 
+-        # show the portals
+-        self.__draw_portals()
++            # show the portals
++            self.__draw_portals()
+ 
+-        # show the robot
+-        self.__draw_robot()
++            # show the robot
++            self.__draw_robot()
+ 
+-        # show the entrance
+-        self.__draw_entrance()
++            # show the entrance
++            self.__draw_entrance()
+ 
+-        # show the goal
+-        self.__draw_goal()
++            # show the goal
++            self.__draw_goal()
+ 
+     def update(self, mode="human"):
+         try:
+-- 
+2.25.1
+
+
+From ed1094528cb16d1023895e88005ec22af350780c Mon Sep 17 00:00:00 2001
+From: l45k <l45k@users.noreply.github.com>
+Date: Mon, 5 Aug 2019 09:11:04 +0200
+Subject: [PATCH 19/22] changed timestep_limit to max_episode_steps according
+ to changes in gym environment variables
+
+---
+ gym_maze/__init__.py | 24 ++++++++++++------------
+ 1 file changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/gym_maze/__init__.py b/gym_maze/__init__.py
+index e8345c8..e629e7b 100644
+--- a/gym_maze/__init__.py
++++ b/gym_maze/__init__.py
+@@ -4,45 +4,45 @@ from gym.envs.registration import register
+ register(
+     id='maze-v0',
+     entry_point='gym_maze.envs:MazeEnvSample5x5',
+-    timestep_limit=2000,
++    max_episode_steps=2000,
+ )
+ 
+ register(
+     id='maze-sample-5x5-v0',
+     entry_point='gym_maze.envs:MazeEnvSample5x5',
+-    timestep_limit=2000,
++    max_episode_steps=2000,
+ )
+ 
+ register(
+     id='maze-random-5x5-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom5x5',
+-    timestep_limit=2000,
++    max_episode_steps=2000,
+     nondeterministic=True,
+ )
+ 
+ register(
+     id='maze-sample-10x10-v0',
+     entry_point='gym_maze.envs:MazeEnvSample10x10',
+-    timestep_limit=10000,
++    max_episode_steps=10000,
+ )
+ 
+ register(
+     id='maze-random-10x10-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom10x10',
+-    timestep_limit=10000,
++    max_episode_steps=10000,
+     nondeterministic=True,
+ )
+ 
+ register(
+     id='maze-sample-3x3-v0',
+     entry_point='gym_maze.envs:MazeEnvSample3x3',
+-    timestep_limit=1000,
++    max_episode_steps=1000,
+ )
+ 
+ register(
+     id='maze-random-3x3-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom3x3',
+-    timestep_limit=1000,
++    max_episode_steps=1000,
+     nondeterministic=True,
+ )
+ 
+@@ -50,33 +50,33 @@ register(
+ register(
+     id='maze-sample-100x100-v0',
+     entry_point='gym_maze.envs:MazeEnvSample100x100',
+-    timestep_limit=1000000,
++    max_episode_steps=1000000,
+ )
+ 
+ register(
+     id='maze-random-100x100-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom100x100',
+-    timestep_limit=1000000,
++    max_episode_steps=1000000,
+     nondeterministic=True,
+ )
+ 
+ register(
+     id='maze-random-10x10-plus-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom10x10Plus',
+-    timestep_limit=1000000,
++    max_episode_steps=1000000,
+     nondeterministic=True,
+ )
+ 
+ register(
+     id='maze-random-20x20-plus-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom20x20Plus',
+-    timestep_limit=1000000,
++    max_episode_steps=1000000,
+     nondeterministic=True,
+ )
+ 
+ register(
+     id='maze-random-30x30-plus-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom30x30Plus',
+-    timestep_limit=1000000,
++    max_episode_steps=1000000,
+     nondeterministic=True,
+ )
+-- 
+2.25.1
+
+
+From 15b1f373fcaa5354f67d72ef8683a9d6417b47f8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Vegard=20Bj=C3=B8rsvik?= <vegardbjr@gmail.com>
+Date: Thu, 15 Oct 2020 16:45:21 +0200
+Subject: [PATCH 20/22] Update README.md
+
+Readme documentation gave wrong directions for action space.
+https://github.com/MattChanTK/gym-maze/blob/master/gym_maze/envs/maze_env.py#L14 here we can see that it is actually ["N", "S", "E", "W"]
+So by reading the documentation you would think that action 2 would be left (W) and action 3 would be right (E), but in the environment they are opposite.
+---
+ README.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/README.md b/README.md
+index 58e3516..4c9d54b 100644
+--- a/README.md
++++ b/README.md
+@@ -6,7 +6,7 @@ The objective is to find the shortest path from the start to the goal.
+ <kbd>![Simple 2D maze environment](http://i.giphy.com/Ar3aKxkAAh3y0.gif)</kbd>
+ 
+ ### Action space
+-The agent may only choose to go up, down, left, or right ("N", "S", "W", "E"). If the way is blocked, it will remain at the same the location. 
++The agent may only choose to go up, down, right, or left ("N", "S", "E", "W"). If the way is blocked, it will remain at the same the location. 
+ 
+ ### Observation space
+ The observation space is the (x, y) coordinate of the agent. The top left cell is (0, 0).
+-- 
+2.25.1
+
+
+From dd387df404aa00531c5b612bcd4e7eb04f041a5a Mon Sep 17 00:00:00 2001
+From: Finn <finnmiddletonbaird@gmail.com>
+Date: Tue, 25 Jan 2022 12:54:52 +0000
+Subject: [PATCH 21/22] Fixed issue when int applied as action to env but error
+ produced. Added simple multi-agent functionality for the environment. Removed
+ max time steps
+
+---
+ gym_maze/__init__.py          | 12 -----
+ gym_maze/envs/maze_env.py     | 95 +++++++++++++++++++++--------------
+ gym_maze/envs/maze_view_2d.py | 60 ++++++++++++----------
+ 3 files changed, 90 insertions(+), 77 deletions(-)
+
+diff --git a/gym_maze/__init__.py b/gym_maze/__init__.py
+index e629e7b..c71dc04 100644
+--- a/gym_maze/__init__.py
++++ b/gym_maze/__init__.py
+@@ -4,45 +4,38 @@ from gym.envs.registration import register
+ register(
+     id='maze-v0',
+     entry_point='gym_maze.envs:MazeEnvSample5x5',
+-    max_episode_steps=2000,
+ )
+ 
+ register(
+     id='maze-sample-5x5-v0',
+     entry_point='gym_maze.envs:MazeEnvSample5x5',
+-    max_episode_steps=2000,
+ )
+ 
+ register(
+     id='maze-random-5x5-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom5x5',
+-    max_episode_steps=2000,
+     nondeterministic=True,
+ )
+ 
+ register(
+     id='maze-sample-10x10-v0',
+     entry_point='gym_maze.envs:MazeEnvSample10x10',
+-    max_episode_steps=10000,
+ )
+ 
+ register(
+     id='maze-random-10x10-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom10x10',
+-    max_episode_steps=10000,
+     nondeterministic=True,
+ )
+ 
+ register(
+     id='maze-sample-3x3-v0',
+     entry_point='gym_maze.envs:MazeEnvSample3x3',
+-    max_episode_steps=1000,
+ )
+ 
+ register(
+     id='maze-random-3x3-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom3x3',
+-    max_episode_steps=1000,
+     nondeterministic=True,
+ )
+ 
+@@ -50,33 +43,28 @@ register(
+ register(
+     id='maze-sample-100x100-v0',
+     entry_point='gym_maze.envs:MazeEnvSample100x100',
+-    max_episode_steps=1000000,
+ )
+ 
+ register(
+     id='maze-random-100x100-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom100x100',
+-    max_episode_steps=1000000,
+     nondeterministic=True,
+ )
+ 
+ register(
+     id='maze-random-10x10-plus-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom10x10Plus',
+-    max_episode_steps=1000000,
+     nondeterministic=True,
+ )
+ 
+ register(
+     id='maze-random-20x20-plus-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom20x20Plus',
+-    max_episode_steps=1000000,
+     nondeterministic=True,
+ )
+ 
+ register(
+     id='maze-random-30x30-plus-v0',
+     entry_point='gym_maze.envs:MazeEnvRandom30x30Plus',
+-    max_episode_steps=1000000,
+     nondeterministic=True,
+ )
+diff --git a/gym_maze/envs/maze_env.py b/gym_maze/envs/maze_env.py
+index 9076f2a..363d33b 100644
+--- a/gym_maze/envs/maze_env.py
++++ b/gym_maze/envs/maze_env.py
+@@ -13,7 +13,7 @@ class MazeEnv(gym.Env):
+ 
+     ACTION = ["N", "S", "E", "W"]
+ 
+-    def __init__(self, maze_file=None, maze_size=None, mode=None, enable_render=True):
++    def __init__(self, maze_file=None, maze_size=None, mode=None, enable_render=True, n_robots=1):
+ 
+         self.viewer = None
+         self.enable_render = enable_render
+@@ -22,7 +22,8 @@ class MazeEnv(gym.Env):
+             self.maze_view = MazeView2D(maze_name="OpenAI Gym - Maze (%s)" % maze_file,
+                                         maze_file_path=maze_file,
+                                         screen_size=(640, 640), 
+-                                        enable_render=enable_render)
++                                        enable_render=enable_render,
++                                        n_robots=n_robots)
+         elif maze_size:
+             if mode == "plus":
+                 has_loops = True
+@@ -34,7 +35,8 @@ class MazeEnv(gym.Env):
+             self.maze_view = MazeView2D(maze_name="OpenAI Gym - Maze (%d x %d)" % maze_size,
+                                         maze_size=maze_size, screen_size=(640, 640),
+                                         has_loops=has_loops, num_portals=num_portals,
+-                                        enable_render=enable_render)
++                                        enable_render=enable_render,
++                                        n_robots=n_robots)
+         else:
+             raise AttributeError("One must supply either a maze_file path (str) or the maze_size (tuple of length 2)")
+ 
+@@ -70,28 +72,43 @@ class MazeEnv(gym.Env):
+         self.np_random, seed = seeding.np_random(seed)
+         return [seed]
+ 
+-    def step(self, action):
+-        if isinstance(action, int):
+-            self.maze_view.move_robot(self.ACTION[action])
+-        else:
+-            self.maze_view.move_robot(action)
++    def step(self, actions):
++        prev_state = self.state
+ 
+-        if np.array_equal(self.maze_view.robot, self.maze_view.goal):
+-            reward = 1
+-            done = True
+-        else:
+-            reward = -0.1/(self.maze_size[0]*self.maze_size[1])
+-            done = False
++        dirs = []
++
++        for action in actions:
++            if action in self.ACTION:
++                dirs.append(action)
++            else:
++                dirs.append(self.ACTION[int(action)])
++
++        self.maze_view.move_robot(dirs)
++#        if isinstance(action, int):
++#            self.maze_view.move_robot(self.ACTION[action])
++#        else:
++#            self.maze_view.move_robot(action)
++        rewards = np.zeros(self.maze_view.n_robots)
++        done = False
++
++        for i in range(self.maze_view.n_robots):
++            if np.array_equal(self.maze_view.robots[i], self.maze_view.goal):
++                rewards[i] = 1
++                done = True
++            elif np.array_equal(self.maze_view.robots, prev_state):
++                rewards[i] = -1/(self.maze_size[0]*self.maze_size[1])
++            else:
++                rewards[i] = -0.1/(self.maze_size[0]*self.maze_size[1])
+ 
+-        self.state = self.maze_view.robot
++        self.state = self.maze_view.robots
+ 
+         info = {}
+ 
+-        return self.state, reward, done, info
++        return self.state, rewards, done, info
+ 
+     def reset(self):
+         self.maze_view.reset_robot()
+-        self.state = np.zeros(2)
++        self.state = np.array([np.zeros(2) for i in range(self.maze_view.n_robots)])
+         self.steps_beyond_done = None
+         self.done = False
+         return self.state
+@@ -108,64 +125,64 @@ class MazeEnv(gym.Env):
+ 
+ class MazeEnvSample5x5(MazeEnv):
+ 
+-    def __init__(self, enable_render=True):
+-        super(MazeEnvSample5x5, self).__init__(maze_file="maze2d_5x5.npy", enable_render=enable_render)
++    def __init__(self, enable_render=True, n_robots=1):
++        super(MazeEnvSample5x5, self).__init__(maze_file="maze2d_5x5.npy", enable_render=enable_render, n_robots=n_robots)
+ 
+ 
+ class MazeEnvRandom5x5(MazeEnv):
+ 
+-    def __init__(self, enable_render=True):
+-        super(MazeEnvRandom5x5, self).__init__(maze_size=(5, 5), enable_render=enable_render)
++    def __init__(self, enable_render=True, n_robots=1):
++        super(MazeEnvRandom5x5, self).__init__(maze_size=(5, 5), enable_render=enable_render, n_robots=n_robots)
+ 
+ 
+ class MazeEnvSample10x10(MazeEnv):
+ 
+-    def __init__(self, enable_render=True):
+-        super(MazeEnvSample10x10, self).__init__(maze_file="maze2d_10x10.npy", enable_render=enable_render)
++    def __init__(self, enable_render=True, n_robots=1):
++        super(MazeEnvSample10x10, self).__init__(maze_file="maze2d_10x10.npy", enable_render=enable_render, n_robots=n_robots)
+ 
+ 
+ class MazeEnvRandom10x10(MazeEnv):
+ 
+-    def __init__(self, enable_render=True):
+-        super(MazeEnvRandom10x10, self).__init__(maze_size=(10, 10), enable_render=enable_render)
++    def __init__(self, enable_render=True, n_robots=1):
++        super(MazeEnvRandom10x10, self).__init__(maze_size=(10, 10), enable_render=enable_render, n_robots=n_robots)
+ 
+ 
+ class MazeEnvSample3x3(MazeEnv):
+ 
+-    def __init__(self, enable_render=True):
+-        super(MazeEnvSample3x3, self).__init__(maze_file="maze2d_3x3.npy", enable_render=enable_render)
++    def __init__(self, enable_render=True, n_robots=1):
++        super(MazeEnvSample3x3, self).__init__(maze_file="maze2d_3x3.npy", enable_render=enable_render, n_robots=n_robots)
+ 
+ 
+ class MazeEnvRandom3x3(MazeEnv):
+ 
+-    def __init__(self, enable_render=True):
+-        super(MazeEnvRandom3x3, self).__init__(maze_size=(3, 3), enable_render=enable_render)
++    def __init__(self, enable_render=True, n_robots=1):
++        super(MazeEnvRandom3x3, self).__init__(maze_size=(3, 3), enable_render=enable_render, n_robots=n_robots)
+ 
+ 
+ class MazeEnvSample100x100(MazeEnv):
+ 
+-    def __init__(self, enable_render=True):
+-        super(MazeEnvSample100x100, self).__init__(maze_file="maze2d_100x100.npy", enable_render=enable_render)
++    def __init__(self, enable_render=True, n_robots=1):
++        super(MazeEnvSample100x100, self).__init__(maze_file="maze2d_100x100.npy", enable_render=enable_render, n_robots=n_robots)
+ 
+ 
+ class MazeEnvRandom100x100(MazeEnv):
+ 
+-    def __init__(self, enable_render=True):
+-        super(MazeEnvRandom100x100, self).__init__(maze_size=(100, 100), enable_render=enable_render)
++    def __init__(self, enable_render=True, n_robots=1):
++        super(MazeEnvRandom100x100, self).__init__(maze_size=(100, 100), enable_render=enable_render, n_robots=n_robots)
+ 
+ 
+ class MazeEnvRandom10x10Plus(MazeEnv):
+ 
+-    def __init__(self, enable_render=True):
+-        super(MazeEnvRandom10x10Plus, self).__init__(maze_size=(10, 10), mode="plus", enable_render=enable_render)
++    def __init__(self, enable_render=True, n_robots=1):
++        super(MazeEnvRandom10x10Plus, self).__init__(maze_size=(10, 10), mode="plus", enable_render=enable_render, n_robots=n_robots)
+ 
+ 
+ class MazeEnvRandom20x20Plus(MazeEnv):
+ 
+-    def __init__(self, enable_render=True):
+-        super(MazeEnvRandom20x20Plus, self).__init__(maze_size=(20, 20), mode="plus", enable_render=enable_render)
++    def __init__(self, enable_render=True, n_robots=1):
++        super(MazeEnvRandom20x20Plus, self).__init__(maze_size=(20, 20), mode="plus", enable_render=enable_render, n_robots=n_robots)
+ 
+ 
+ class MazeEnvRandom30x30Plus(MazeEnv):
+-    def __init__(self, enable_render=True):
+-        super(MazeEnvRandom30x30Plus, self).__init__(maze_size=(30, 30), mode="plus", enable_render=enable_render)
++    def __init__(self, enable_render=True, n_robots=1):
++        super(MazeEnvRandom30x30Plus, self).__init__(maze_size=(30, 30), mode="plus", enable_render=enable_render, n_robots=n_robots)
+diff --git a/gym_maze/envs/maze_view_2d.py b/gym_maze/envs/maze_view_2d.py
+index 0be08f1..4dad3d1 100644
+--- a/gym_maze/envs/maze_view_2d.py
++++ b/gym_maze/envs/maze_view_2d.py
+@@ -7,7 +7,7 @@ import os
+ class MazeView2D:
+ 
+     def __init__(self, maze_name="Maze2D", maze_file_path=None,
+-                 maze_size=(30, 30), screen_size=(600, 600),
++                 maze_size=(30, 30), screen_size=(600, 600), n_robots=1,
+                  has_loops=False, num_portals=0, enable_render=True):
+ 
+         # PyGame configurations
+@@ -43,7 +43,9 @@ class MazeView2D:
+         self.__goal = np.array(self.maze_size) - np.array((1, 1))
+ 
+         # Create the Robot
+-        self.__robot = self.entrance
++#       self.__robot = self.entrance
++        self.n_robots = n_robots
++        self.__robots = [self.entrance for i in range(n_robots)]
+ 
+         if self.__enable_render is True:
+             # Create a background
+@@ -61,7 +63,7 @@ class MazeView2D:
+             self.__draw_portals()
+ 
+             # show the robot
+-            self.__draw_robot()
++            self.__draw_robots()
+ 
+             # show the entrance
+             self.__draw_entrance()
+@@ -89,28 +91,30 @@ class MazeView2D:
+         except Exception:
+             pass
+ 
+-    def move_robot(self, dir):
+-        if dir not in self.__maze.COMPASS.keys():
+-            raise ValueError("dir cannot be %s. The only valid dirs are %s."
+-                             % (str(dir), str(self.__maze.COMPASS.keys())))
++    def move_robot(self, dirs):
++        for i in range(np.size(dirs)):    
++            if dirs[i] not in self.__maze.COMPASS.keys():
++                raise ValueError("dir cannot be %s. The only valid dirs are %s."
++                                 % (str(dirs[i]), str(self.__maze.COMPASS.keys())))
+ 
+-        if self.__maze.is_open(self.__robot, dir):
++            if self.__maze.is_open(self.__robots[i], dirs[i]):
+ 
+-            # update the drawing
+-            self.__draw_robot(transparency=0)
++                # update the drawing
++                self.__draw_robots(transparency=0)
+ 
+-            # move the robot
+-            self.__robot += np.array(self.__maze.COMPASS[dir])
+-            # if it's in a portal afterward
+-            if self.maze.is_portal(self.robot):
+-                self.__robot = np.array(self.maze.get_portal(tuple(self.robot)).teleport(tuple(self.robot)))
+-            self.__draw_robot(transparency=255)
++                # move the robot
++                self.__robots[i] += np.array(self.__maze.COMPASS[dirs[i]])
++                # if it's in a portal afterward
++                if self.maze.is_portal(self.robots[i]):
++                    self.__robots[i] = np.array(self.maze.get_portal(tuple(self.robot)).teleport(tuple(self.robot)))
++        
++        self.__draw_robots(transparency=255)
+ 
+     def reset_robot(self):
+ 
+-        self.__draw_robot(transparency=0)
+-        self.__robot = np.zeros(2, dtype=int)
+-        self.__draw_robot(transparency=255)
++        self.__draw_robots(transparency=0)
++        self.__robots = [np.zeros(2, dtype=int) for i in range(self.n_robots)]
++        self.__draw_robots(transparency=255)
+ 
+     def __controller_update(self):
+         if not self.__game_over:
+@@ -125,7 +129,7 @@ class MazeView2D:
+             self.__draw_entrance()
+             self.__draw_goal()
+             self.__draw_portals()
+-            self.__draw_robot()
++            self.__draw_robots()
+ 
+ 
+             # update the screen
+@@ -194,16 +198,19 @@ class MazeView2D:
+ 
+             pygame.draw.line(self.maze_layer, colour, line_head, line_tail)
+ 
+-    def __draw_robot(self, colour=(0, 0, 150), transparency=255):
++    def __draw_robots(self, colour=(0, 0, 150), transparency=255):
+ 
+         if self.__enable_render is False:
+             return
+         
+-        x = int(self.__robot[0] * self.CELL_W + self.CELL_W * 0.5 + 0.5)
+-        y = int(self.__robot[1] * self.CELL_H + self.CELL_H * 0.5 + 0.5)
++#        x = int(self.__robot[0] * self.CELL_W + self.CELL_W * 0.5 + 0.5)
++#        y = int(self.__robot[1] * self.CELL_H + self.CELL_H * 0.5 + 0.5)
++        x_coords = [int(robot[0] * self.CELL_W + self.CELL_W * 0.5 + 0.5) for robot in self.__robots]
++        y_coords = [int(robot[1] * self.CELL_H + self.CELL_H * 0.5 + 0.5) for robot in self.__robots]
+         r = int(min(self.CELL_W, self.CELL_H)/5 + 0.5)
+ 
+-        pygame.draw.circle(self.maze_layer, colour + (transparency,), (x, y), r)
++        for x, y in zip(x_coords, y_coords):
++            pygame.draw.circle(self.maze_layer, colour + (transparency,), (x, y), r)
+ 
+     def __draw_entrance(self, colour=(0, 0, 150), transparency=235):
+ 
+@@ -245,8 +252,9 @@ class MazeView2D:
+         return self.__maze
+ 
+     @property
+-    def robot(self):
+-        return self.__robot
++    def robots(self):
++#        return self.__robot
++        return self.__robots
+ 
+     @property
+     def entrance(self):
+-- 
+2.25.1
+
+
+From 8a3114774a57c61b770f4e0c579c2d63536caf6b Mon Sep 17 00:00:00 2001
+From: Finn <finnmiddletonbaird@gmail.com>
+Date: Fri, 11 Mar 2022 15:20:49 +0000
+Subject: [PATCH 22/22] Imporved multi-agent fucntionality to detect if single
+ or multi-agent, no longer uses arrays for actions/states etc if single agent
+
+---
+ gym_maze/envs/maze_env.py     | 59 ++++++++++++++++++++------------
+ gym_maze/envs/maze_view_2d.py | 64 +++++++++++++++++++++++++----------
+ 2 files changed, 84 insertions(+), 39 deletions(-)
+
+diff --git a/gym_maze/envs/maze_env.py b/gym_maze/envs/maze_env.py
+index 363d33b..88a0f56 100644
+--- a/gym_maze/envs/maze_env.py
++++ b/gym_maze/envs/maze_env.py
+@@ -74,41 +74,58 @@ class MazeEnv(gym.Env):
+ 
+     def step(self, actions):
+         prev_state = self.state
++        done = False
+ 
+-        dirs = []
+-
+-        for action in actions:
+-            if action in self.ACTION:
+-                dirs.append(action)
++        if self.maze_view.n_robots > 1:
++            #multi agent
++            dirs = []
++
++            for action in actions:
++                if action in self.ACTION:
++                    dirs.append(action)
++                else:
++                    dirs.append(self.ACTION[int(action)])
++
++            self.maze_view.move_robot(dirs)
++            rewards = np.zeros(self.maze_view.n_robots)
++
++            for i in range(self.maze_view.n_robots):
++                if np.array_equal(self.maze_view.robots[i], self.maze_view.goal):
++                    reward[i] = 1
++                    done = True
++                elif np.array_equal(self.maze_view.robots, prev_state):
++                    reward[i] = -1/(self.maze_size[0]*self.maze_size[1])
++                else:
++                    reward[i] = -0.1/(self.maze_size[0]*self.maze_size[1])
++        else:
++            #single agent
++            if actions in self.ACTION:
++                self.maze_view.move_robot(actions)
+             else:
+-                dirs.append(self.ACTION[int(action)])
+-
+-        self.maze_view.move_robot(dirs)
+-#        if isinstance(action, int):
+-#            self.maze_view.move_robot(self.ACTION[action])
+-#        else:
+-#            self.maze_view.move_robot(action)
+-        rewards = np.zeros(self.maze_view.n_robots)
+-        done = False
++                self.maze_view.move_robot(self.ACTION[int(actions)])
+ 
+-        for i in range(self.maze_view.n_robots):
+-            if np.array_equal(self.maze_view.robots[i], self.maze_view.goal):
+-                rewards[i] = 1
++            if np.array_equal(self.maze_view.robots, self.maze_view.goal):
++                reward = 1
+                 done = True
+             elif np.array_equal(self.maze_view.robots, prev_state):
+-                rewards[i] = -1/(self.maze_size[0]*self.maze_size[1])
++                reward = -1/(self.maze_size[0]*self.maze_size[1])
+             else:
+-                rewards[i] = -0.1/(self.maze_size[0]*self.maze_size[1])
++                reward = -0.1/(self.maze_size[0]*self.maze_size[1])
+ 
+         self.state = self.maze_view.robots
+ 
+         info = {}
+ 
+-        return self.state, rewards, done, info
++        return self.state, reward, done, info
+ 
+     def reset(self):
+         self.maze_view.reset_robot()
+-        self.state = np.array([np.zeros(2) for i in range(self.maze_view.n_robots)])
++        
++        if self.maze_view.n_robots > 1:
++            self.state = np.array([np.zeros(2) for i in range(self.maze_view.n_robots)])
++        else:
++            self.state = np.zeros(2)
++
+         self.steps_beyond_done = None
+         self.done = False
+         return self.state
+diff --git a/gym_maze/envs/maze_view_2d.py b/gym_maze/envs/maze_view_2d.py
+index 4dad3d1..8f0ea2a 100644
+--- a/gym_maze/envs/maze_view_2d.py
++++ b/gym_maze/envs/maze_view_2d.py
+@@ -43,9 +43,12 @@ class MazeView2D:
+         self.__goal = np.array(self.maze_size) - np.array((1, 1))
+ 
+         # Create the Robot
+-#       self.__robot = self.entrance
+         self.n_robots = n_robots
+-        self.__robots = [self.entrance for i in range(n_robots)]
++
++        if self.n_robots > 1:
++            self.__robots = [self.entrance for i in range(n_robots)]
++        else:
++            self.__robots = self.entrance
+ 
+         if self.__enable_render is True:
+             # Create a background
+@@ -92,28 +95,49 @@ class MazeView2D:
+             pass
+ 
+     def move_robot(self, dirs):
+-        for i in range(np.size(dirs)):    
+-            if dirs[i] not in self.__maze.COMPASS.keys():
++        if self.n_robots > 1:
++            for i in range(np.size(dirs)):    
++                if dirs[i] not in self.__maze.COMPASS.keys():
++                    raise ValueError("dir cannot be %s. The only valid dirs are %s."
++                                     % (str(dirs[i]), str(self.__maze.COMPASS.keys())))
++
++                if self.__maze.is_open(self.__robots[i], dirs[i]):
++
++                    # update the drawing
++                    self.__draw_robots(transparency=0)
++
++                    # move the robot
++                    self.__robots[i] += np.array(self.__maze.COMPASS[dirs[i]])
++                    # if it's in a portal afterward
++                    if self.maze.is_portal(self.robots[i]):
++                        self.__robots[i] = np.array(self.maze.get_portal(tuple(self.robots[i])).teleport(tuple(self.robots[i])))
++        
++        else:
++            if dirs not in self.__maze.COMPASS.keys():
+                 raise ValueError("dir cannot be %s. The only valid dirs are %s."
+-                                 % (str(dirs[i]), str(self.__maze.COMPASS.keys())))
+-
+-            if self.__maze.is_open(self.__robots[i], dirs[i]):
++                                 % (str(dirs), str(self.__maze.COMPASS.keys())))
+ 
++            if self.__maze.is_open(self.__robots, dirs):
+                 # update the drawing
+                 self.__draw_robots(transparency=0)
+ 
+                 # move the robot
+-                self.__robots[i] += np.array(self.__maze.COMPASS[dirs[i]])
++                self.__robots += np.array(self.__maze.COMPASS[dirs])
+                 # if it's in a portal afterward
+-                if self.maze.is_portal(self.robots[i]):
+-                    self.__robots[i] = np.array(self.maze.get_portal(tuple(self.robot)).teleport(tuple(self.robot)))
+-        
++                if self.maze.is_portal(self.robots):
++                    self.__robots = np.array(self.maze.get_portal(tuple(self.robot)).teleport(tuple(self.robot)))
++
+         self.__draw_robots(transparency=255)
+ 
+     def reset_robot(self):
+ 
+         self.__draw_robots(transparency=0)
+-        self.__robots = [np.zeros(2, dtype=int) for i in range(self.n_robots)]
++
++        if self.n_robots > 1:
++            self.__robots = [np.zeros(2, dtype=int) for i in range(self.n_robots)]
++        else:
++            self.__robots = np.zeros(2, dtype=int)
++
+         self.__draw_robots(transparency=255)
+ 
+     def __controller_update(self):
+@@ -203,13 +227,18 @@ class MazeView2D:
+         if self.__enable_render is False:
+             return
+         
+-#        x = int(self.__robot[0] * self.CELL_W + self.CELL_W * 0.5 + 0.5)
+-#        y = int(self.__robot[1] * self.CELL_H + self.CELL_H * 0.5 + 0.5)
+-        x_coords = [int(robot[0] * self.CELL_W + self.CELL_W * 0.5 + 0.5) for robot in self.__robots]
+-        y_coords = [int(robot[1] * self.CELL_H + self.CELL_H * 0.5 + 0.5) for robot in self.__robots]
+         r = int(min(self.CELL_W, self.CELL_H)/5 + 0.5)
+ 
+-        for x, y in zip(x_coords, y_coords):
++        if self.n_robots > 1:
++            x_coords = [int(robot[0] * self.CELL_W + self.CELL_W * 0.5 + 0.5) for robot in self.__robots]
++            y_coords = [int(robot[1] * self.CELL_H + self.CELL_H * 0.5 + 0.5) for robot in self.__robots]
++
++            for x, y in zip(x_coords, y_coords):
++                pygame.draw.circle(self.maze_layer, colour + (transparency,), (x, y), r)
++        else:
++            x = int(self.__robots[0] * self.CELL_W + self.CELL_W * 0.5 + 0.5)
++            y = int(self.__robots[1] * self.CELL_H + self.CELL_H * 0.5 + 0.5)
++
+             pygame.draw.circle(self.maze_layer, colour + (transparency,), (x, y), r)
+ 
+     def __draw_entrance(self, colour=(0, 0, 150), transparency=235):
+@@ -253,7 +282,6 @@ class MazeView2D:
+ 
+     @property
+     def robots(self):
+-#        return self.__robot
+         return self.__robots
+ 
+     @property
+-- 
+2.25.1
+
