@@ -1,6 +1,7 @@
-# Reinforcement Learning (RL) Training Environment
+# Reinforcement Learning (RL) Training Environment (Lower performance branch)
 
 A training environment for reinforcement learning algorithms using [open-ai gym](https://gym.openai.com/), as first suggested by Brockman et al in [[1]](#1)
+This branch uses custom model definitions for tensorflow models and implements running algorithms differently than the main branch. This causes lower performance for all algorithms.
 
 ## Included Algorithms
 
