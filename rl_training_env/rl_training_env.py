@@ -219,10 +219,10 @@ if __name__ == "__main__":
 
     #parameters used (includes defaults even if algorithm does not use that parameter)
     parameters = {"hidden-size": args.hidden_size, "gamma": args.gamma, "epsilon-max": args.epsilon_max, "epsilon-min": args.epsilon_min,
-            "lr": args.lr, "decay": args.decay, "batch-size": args.batch_size}
+            "lr": args.learning_rate, "decay": args.decay, "batch-size": args.batch_size}
 
     #q-learning does not have losses
-    if not losses:
+    if "losses" not in locals():
         losses = None
 
     #process and save captured data

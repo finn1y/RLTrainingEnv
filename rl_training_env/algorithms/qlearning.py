@@ -7,7 +7,6 @@
 import sys, os, pickle
 import logging
 import numpy as np
-import gym
 
 from algorithms.rl_algorithm import RLAlgorithm
 
