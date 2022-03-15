@@ -47,6 +47,9 @@ def run_gym_policy_grad_multi_agent(env, n_agents: int=1, render: bool=False, ep
     all_rewards = []
     all_losses = []
 
+    #robot-maze env can save the path taken by the agents each episode
+    robot_paths = []
+
     #render env if enabled
     if render:
         env.render()
@@ -86,6 +89,10 @@ def run_gym_policy_grad_multi_agent(env, n_agents: int=1, render: bool=False, ep
                 all_obvs.append(ep_obvs)
                 all_actions.append(ep_actions)
                 all_rewards.append(total_rewards)
+
+                if env.unwrapped.spec.id[0:13] == "gym_robot_maze":
+                    robot_paths.append(info["robot_path"])
+
                 break
 
             elif t >= (time_steps - 1):
@@ -94,6 +101,10 @@ def run_gym_policy_grad_multi_agent(env, n_agents: int=1, render: bool=False, ep
                 all_obvs.append(ep_obvs)
                 all_actions.append(ep_actions)
                 all_rewards.append(total_rewards)
+
+                if env.unwrapped.spec.id[0:13] == "gym_robot_maze":
+                    robot_paths.append(info["robot_path"])
+
                 break
 
             if env.unwrapped.spec.id[0:5] == "maze-" and env.is_game_over():
@@ -104,7 +115,7 @@ def run_gym_policy_grad_multi_agent(env, n_agents: int=1, render: bool=False, ep
             ep_losses.append(loss)
             all_losses.append(ep_losses)
 
-    return all_obvs, all_actions, all_rewards, all_losses
+    return all_obvs, all_actions, all_rewards, all_losses, robot_paths
 
 def run_gym_policy_grad_single_agent(env, render: bool=False, episodes: int=100, time_steps: int=10000):
     """
@@ -133,6 +144,9 @@ def run_gym_policy_grad_single_agent(env, render: bool=False, episodes: int=100,
     all_actions = []
     all_rewards = []
     all_losses = []
+
+    #robot-maze env can save the path taken by the agents each episode
+    robot_paths = []
 
     #render env if enabled
     if render:
@@ -168,6 +182,10 @@ def run_gym_policy_grad_single_agent(env, render: bool=False, episodes: int=100,
                 all_obvs.append(ep_obvs)
                 all_actions.append(ep_actions)
                 all_rewards.append(total_reward)
+
+                if env.unwrapped.spec.id[0:13] == "gym_robot_maze":
+                    robot_paths.append(info["robot_path"])
+
                 break
 
             elif t >= (time_steps - 1):
@@ -176,6 +194,10 @@ def run_gym_policy_grad_single_agent(env, render: bool=False, episodes: int=100,
                 all_obvs.append(ep_obvs)
                 all_actions.append(ep_actions)
                 all_rewards.append(total_reward)
+
+                if env.unwrapped.spec.id[0:13] == "gym_robot_maze":
+                    robot_paths.append(info["robot_path"])
+
                 break
 
             if env.unwrapped.spec.id[0:5] == "maze-" and env.is_game_over():
@@ -184,7 +206,7 @@ def run_gym_policy_grad_single_agent(env, render: bool=False, episodes: int=100,
         loss = agent.train()
         all_losses.append(loss)
 
-    return all_obvs, all_actions, all_rewards, all_losses
+    return all_obvs, all_actions, all_rewards, all_losses, robot_paths
 
 #-----------------------------------------------------------------------------------------------    
 # Classes

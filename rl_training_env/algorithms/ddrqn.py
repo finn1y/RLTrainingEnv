@@ -47,6 +47,9 @@ def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes
     all_rewards = []
     all_losses = []
 
+    #robot-maze env can save the path taken by the agents each episode
+    robot_paths = []
+
     #render env if enabled
     if render:
         env.render()
@@ -96,6 +99,10 @@ def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes
                 all_actions.append(ep_actions)
                 all_rewards.append(total_rewards)
                 all_losses.append(ep_losses)
+
+                if env.unwrapped.spec.id[0:13] == "gym_robot_maze":
+                    robot_paths.append(info["robot_path"])
+
                 break
 
             elif t >= (time_steps - 1):
@@ -105,6 +112,10 @@ def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes
                 all_actions.append(ep_actions)
                 all_rewards.append(total_rewards)
                 all_losses.append(ep_losses)
+
+                if env.unwrapped.spec.id[0:13] == "gym_robot_maze":
+                    robot_paths.append(info["robot_path"])
+
                 break
 
             if env.unwrapped.spec.id[0:5] == "maze-" and env.is_game_over():
@@ -113,7 +124,7 @@ def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes
         for i in range(n_agents):
             agents[i].update_parameters(e)
 
-    return all_obvs, all_actions, all_rewards, all_losses
+    return all_obvs, all_actions, all_rewards, all_losses, robot_paths
 
 #-----------------------------------------------------------------------------------------------    
 # Classes

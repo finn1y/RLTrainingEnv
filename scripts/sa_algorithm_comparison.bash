@@ -122,7 +122,7 @@ for a in ${ALGORITHMS[@]}; do
     #directory to save data to
     DIR="$DIR_PREFIX/$ENV/$a"
 
-    CMD="./rl_training_env.py $ENV $a -e 1000 -d $DIR" 
+    CMD="./rl_training_env.py $ENV $a -e 500 -d $DIR" 
 
     #if maze load path supplied and env is robot-maze add option to command
     if [[ -z $MAZE_LOAD_PATH && "$ENV" == "gym_robot_maze:RobotMaze-v1" ]]; then

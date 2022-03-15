@@ -21,7 +21,7 @@ from algorithms import *
 # Functions
 #-----------------------------------------------------------------------------------------------------------
 
-def get_args(envs, algorithms):
+def get_args(envs: list, algorithms: list):
     """
         function to get the command line arguments
 
@@ -51,29 +51,17 @@ def get_args(envs, algorithms):
 
     return parser.parse_args()
 
-def save_data(path, data, agent, env, algorithm):
+def save_data(path: str, data: dict, env: str, algorithm: str):
     """
         function to save data in a pickle file gathered during training in the directory at path
-        directory has the following structure, for q-learning:
+        directory has the following structure:
 
             -path
                 -data.pkl
-                -q_table.pkl
 
-        or for any other algorithm:
+        path is the path to the directory to store the data in
 
-            -path
-                -data.pkl
-                -agent0
-                    -(saved tf model)
-                -agent1
-                    -(saved tf model)
-
-        path is a string of the path to the directory to store the data in
-
-        data is a dictionary of the data to be saved
-
-        agent is a reference of the agent trained on the environment with the algorithm
+        data is the data to be saved
 
         env is the name of the environment the data was gathered on
 
@@ -89,18 +77,7 @@ def save_data(path, data, agent, env, algorithm):
     with open(f'{path}/data.pkl', "wb") as handle:
         pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    #model (or q-table) saved for continuation of training if desired
-    if algorithm != "qlearning":
-        #save tf model
-        for i in range(np.size(agents)):
-            agents[i].save_model(f'{path}/agent{i}')
-    else:
-        #save q-table in pickle file
-        for i in range(np.size(agents)):
-            with open(f'{path}/q_table{i}.pkl', "wb") as handle:
-                pickle.dump(agents[i].q_table, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-def get_installed_envs():
+def get_installed_envs() -> list:
     """
         function to check which envs are installed on the system and return those available
 
@@ -186,6 +163,7 @@ if __name__ == "__main__":
     if args.Algorithm in algorithms[6:] and args.agents < 2:
         raise Exception(f'{args.Algorithm} is a multi-agent algorithm and must have > 1 agents.')
 
+    #init env
     if args.Environment in envs[:6]:
         env = gym.make(args.Environment, enable_render=args.render, n_robots=args.agents)
     elif args.Environment in envs[6:7]:
@@ -193,65 +171,69 @@ if __name__ == "__main__":
     else:
         env = gym.make(args.Environment)
 
-    ######################################################## add to funcs
-    if args.Environment in envs[6:7]:
-        #robot-maze env can save the path taken by the agents each episode
-        robot_paths = []
-    ########################################################
-
     #run algorithm on gym env 
     if args.agents > 1:
+        #multi-agent
         if args.Algorithm == "qlearning":
-            obvs, actions, rewards = run_gym_q_learning_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
+            obvs, actions, rewards, robot_paths = run_gym_q_learning_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
 
         if args.Algorithm == "dqn":
-            obvs, actions, rewards, losses = run_gym_dqn_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
+            obvs, actions, rewards, losses, robot_paths = run_gym_dqn_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
 
         if args.Algorithm == "drqn":
-            obvs, actions, rewards, losses = run_gym_dqn_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render, recurrent=True)
+            obvs, actions, rewards, losses, robot_paths = run_gym_dqn_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render, recurrent=True)
 
         if args.Algorithm == "policy_gradient":
-            obvs, actions, rewards, losses = run_gym_policy_grad_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
+            obvs, actions, rewards, losses, robot_paths = run_gym_policy_grad_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
             
         if args.Algorithm == "actor_critic": 
-            obvs, actions, rewards, losses = run_gym_actor_critic_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
+            obvs, actions, rewards, losses, robot_paths = run_gym_actor_critic_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
 
         if args.Algorithm == "ddrqn":
-            obvs, actions, rewards, losses = run_gym_ddrqn_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
+            obvs, actions, rewards, losses, robot_paths = run_gym_ddrqn_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
 
         if args.Algorithm == "ma_actor_critic":
-            obvs, actions, rewards, losses = run_gym_ma_actor_critic_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
+            obvs, actions, rewards, losses, robot_paths = run_gym_ma_actor_critic_multi_agent(env, n_agents=args.agents, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
 
     elif args.agents == 1:
+        #single-agent
         if args.Algorithm == "qlearning":
-            obvs, actions, rewards = run_gym_q_learning_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
+            obvs, actions, rewards, robot_paths = run_gym_q_learning_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
 
         if args.Algorithm == "dqn":
-            obvs, actions, rewards, losses = run_gym_dqn_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
+            obvs, actions, rewards, losses, robot_paths = run_gym_dqn_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
 
         if args.Algorithm == "drqn":
-            obvs, actions, rewards, losses = run_gym_dqn_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, render=args.render, recurrent=True)
+            obvs, actions, rewards, losses, robot_paths = run_gym_dqn_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, render=args.render, recurrent=True)
 
         if args.Algorithm == "policy_gradient":
-            obvs, actions, rewards, losses = run_gym_policy_grad_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
+            obvs, actions, rewards, losses, robot_paths = run_gym_policy_grad_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
 
         if args.Algorithm == "actor_critic": 
-            obvs, actions, rewards, losses = run_gym_actor_critic_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
+            obvs, actions, rewards, losses, robot_paths = run_gym_actor_critic_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
 
         if args.Algorithm == "ddpg":
-            obvs, actions, rewards, losses = run_gym_ddpg_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
+            obvs, actions, rewards, losses, robot_paths = run_gym_ddpg_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, render=args.render)
     
     logging.info("Training complete after %u episodes", args.episodes)
 
+    #parameters used (includes defaults even if algorithm does not use that parameter)
+    parameters = {"hidden-size": args.hidden_size, "gamma": args.gamma, "epsilon-max": args.epsilon_max, "epsilon-min": args.epsilon_min,
+            "lr": args.lr, "decay": args.decay, "batch-size": args.batch_size}
+
+    #q-learning does not have losses
+    if not losses:
+        losses = None
+
     #process and save captured data
-    data = {"Parameters": None, "rewards": rewards}#, "losses": losses}
+    data = {"Parameters": parameters, "obvs": obvs, "actions": actions, "rewards": rewards, "losses": losses}
 
     #add agents' path to data if available
     if args.Environment == "gym_robot_maze:RobotMaze-v1":
         data["robot_paths"] = robot_paths
     
     if args.directory:
-        save_data(args.directory, data, agents, args.Environment, args.Algorithm)
+        save_data(args.directory, data, args.Environment, args.Algorithm)
 
     if args.plot:
         #plot average reward of agents against episode
