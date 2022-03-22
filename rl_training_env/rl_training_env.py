@@ -12,7 +12,6 @@ import logging
 import gym
 import gym_maze
 import numpy as np
-import tensorflow as tf
 import matplotlib.pyplot as plt
 
 from algorithms import *
@@ -237,7 +236,7 @@ if __name__ == "__main__":
 
     if args.plot:
         #plot average reward of agents against episode
-        if args.n_agents > 1:
+        if args.agents > 1:
             avg_reward = [np.average(rewards[i]) for i in range(np.size(rewards))]
             plt.plot(avg_reward)
         else:

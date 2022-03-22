@@ -39,7 +39,7 @@ def run_gym_q_learning_multi_agent(env, n_agents: int=1, render: bool=False, epi
     n_actions = env.action_space.n #number of actions
     low = env.observation_space.low #minimum values of observation space
     high = env.observation_space.high #maximum values of observation space
-    n_states = np.prod(high - low + 1) #number of discretised states
+    n_states = np.prod(high - low + 1, dtype=int) #number of discretised states
 
     agents = [QLearning(n_states, n_actions) for i in range(n_agents)]
 
