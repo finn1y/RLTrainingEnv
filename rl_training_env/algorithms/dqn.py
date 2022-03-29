@@ -14,7 +14,7 @@ from algorithms.rl_algorithm import RLAlgorithm
 # Functions
 #-----------------------------------------------------------------------------------------------
 
-def run_gym_dqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes: int=100, time_steps: int=10000, recurrent: bool=False):
+def run_gym_dqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes: int=100, time_steps: int=10000, recurrent: bool=False, hidden_size: int=128, gamma: float=0.99, epsilon_max: float=1.0, epsilon_min: float=0.01, lr: float=0.00025, decay: float=0.999, lr_decay_steps: int=10000, mem_size: int=10000, batch_size: int=32, saved_path: str=None):
     """
         function to run independent dqn algorithm on a gym env
 
@@ -35,13 +35,11 @@ def run_gym_dqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes: 
     elif n_agents < 2:
         logging.error("Running multi-agent function with only 1 agent. Use single agent function for single agent environments")
 
-    batch_size = 32
-
     #get env variables
     n_actions = env.action_space.n #number of actions
     n_obvs = np.squeeze(env.observation_space.shape)
 
-    agents = [DQN(n_obvs, n_actions, DRQN=recurrent) for i in range(n_agents)]
+    agents = [DQN(n_obvs, n_actions, hidden_size=hidden_size, gamma=gamma, epsilon_max=epsilon_max, epsilon_min=epsilon_min, lr=lr, decay=decay, lr_decay_steps=lr_decay_steps, mem_size=mem_size, batch_size=batch_size, DRQN=recurrent, saved_path=saved_path) for i in range(n_agents)]
 
     #init arrays to collect data
     all_obvs = []
@@ -130,7 +128,7 @@ def run_gym_dqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes: 
 
     return all_obvs, all_actions, all_rewards, all_losses, robot_paths
 
-def run_gym_dqn_single_agent(env, render: bool=False, episodes: int=100, time_steps: int=10000, recurrent: bool=False):
+def run_gym_dqn_single_agent(env, render: bool=False, episodes: int=100, time_steps: int=10000, recurrent: bool=False, hidden_size: int=128, gamma: float=0.99, epsilon_max: float=1.0, epsilon_min: float=0.01, lr: float=0.00025, decay: float=0.999, lr_decay_steps: int=10000, mem_size: int=10000, batch_size: int=32, saved_path: str=None):
     """
         function to run dqn algorithm on a gym env
 
@@ -152,7 +150,7 @@ def run_gym_dqn_single_agent(env, render: bool=False, episodes: int=100, time_st
     n_actions = env.action_space.n #number of actions
     n_obvs = np.squeeze(env.observation_space.shape)
 
-    agent = DQN(n_obvs, n_actions, DRQN=recurrent)
+    agent = DQN(n_obvs, n_actions, hidden_size=hidden_size, gamma=gamma, epsilon_max=epsilon_max, epsilon_min=epsilon_min, lr=lr, decay=decay, lr_decay_steps=lr_decay_steps, mem_size=mem_size, batch_size=batch_size, DRQN=recurrent, saved_path=saved_path)
 
     #init arrays to collect data
     all_obvs = []

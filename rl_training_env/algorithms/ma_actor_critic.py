@@ -14,7 +14,7 @@ from algorithms.rl_algorithm import RLAlgorithm
 # Functions
 #-----------------------------------------------------------------------------------------------
 
-def run_gym_ma_actor_critic_multi_agent(env, n_agents: int=1, render: bool=False, episodes: int=100, time_steps: int=10000):
+def run_gym_ma_actor_critic_multi_agent(env, n_agents: int=1, render: bool=False, episodes: int=100, time_steps: int=10000, hidden_size: int=128, gamma: float=0.99, decay: float=0.9, lr: float=0.0001, lr_decay_steps: int=10000, saved_path: str=None):
     """
         function to run multi-agent actor critic algorithm on a gym env
 
@@ -39,8 +39,9 @@ def run_gym_ma_actor_critic_multi_agent(env, n_agents: int=1, render: bool=False
     n_actions = env.action_space.n #number of actions
     n_obvs = np.squeeze(env.observation_space.shape)
 
-    agents = [MAActorCritic(n_obvs, n_actions, master=True, n_agents=n_agents)]
-    agents.extend([MAActorCritic(n_obvs, n_actions, n_agents=n_agents) for i in range(n_agents - 1)])
+    
+    agents = [MAActorCritic(n_obvs, n_actions, hidden_size=hidden_size, gamma=gamma, decay=decay, lr=lr, lr_decay_steps=lr_decay_steps, n_agents=n_agents, master=True, saved_path=saved_path)]
+    agents.extend([MAActorCritic(n_obvs, n_actions, hidden_size=hidden_size, gamma=gamma, decay=decay, lr=lr, lr_decay_steps=lr_decay_steps, n_agents=n_agents, saved_path=saved_path) for i in range(n_agents - 1)])
 
     #init arrays to collect data
     all_obvs = []

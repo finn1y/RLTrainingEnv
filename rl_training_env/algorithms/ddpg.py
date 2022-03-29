@@ -14,7 +14,7 @@ from algorithms.rl_algorithm import RLAlgorithm
 # Functions
 #-----------------------------------------------------------------------------------------------
 
-def run_gym_ddpg_single_agent(env, render: bool=False, episodes: int=100, time_steps: int=10000):
+def run_gym_ddpg_single_agent(env, render: bool=False, episodes: int=100, time_steps: int=10000, hidden_size: int=256, gamma: float=0.99, lr: float=0.001, decay: float=0.9, lr_decay_steps: int=10000, mem_size: int=10000, batch_size: int=32, saved_path: str=None):
     """
         function to run ddpg algorithm on a gym env
 
@@ -30,13 +30,11 @@ def run_gym_ddpg_single_agent(env, render: bool=False, episodes: int=100, time_s
 
         returns obvs, actions, rewards and losses of all agents
     """
-    batch_size = 32
-
     #get env variables
     n_actions = int(np.squeeze(env.action_space.shape)) #number of actions
     n_obvs = np.squeeze(env.observation_space.shape)
 
-    agent = DDPG(n_obvs, n_actions, env.action_space.high, env.action_space.low, batch_size=batch_size)
+    agent = DDPG(n_obvs, n_actions, env.action_space.high, env.action_space.low, hidden_size=hidden_size, gamma=gamma, lr=lr, decay=decay, lr_decay_steps=lr_decay_steps, mem_size=mem_size, batch_size=batch_size, saved_path=saved_path)
 
     #init arrays to collect data
     all_obvs = []

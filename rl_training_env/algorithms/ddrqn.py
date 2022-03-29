@@ -14,7 +14,7 @@ from algorithms.dqn import DQN
 # Functions
 #-----------------------------------------------------------------------------------------------
 
-def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes: int=100, time_steps: int=10000):
+def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes: int=100, time_steps: int=10000, hidden_size: int=128, gamma: float=0.99, epsilon_max: float=1.0, epsilon_min: float=0.01, lr: float=0.00025, decay: float=0.999, lr_decay_steps: int=10000, saved_path: str=None):
     """
         function to run ddrqn algorithm on a gym env
 
@@ -39,7 +39,7 @@ def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes
     n_actions = env.action_space.n #number of actions
     n_obvs = np.squeeze(env.observation_space.shape)
 
-    agents = [DDRQN(n_obvs, n_actions) for i in range(n_agents)]
+    agents = [DDRQN(n_obvs, n_actions, hidden_size=hidden_size, gamma=gamma, epsilon_max=epsilon_max, epsilon_min=epsilon_min, lr=lr, decay=decay, lr_decay_steps=lr_decay_steps, saved_path=saved_path) for i in range(n_agents)]
 
     #init arrays to collect data
     all_obvs = []

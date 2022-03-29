@@ -13,8 +13,8 @@ from algorithms.rl_algorithm import RLAlgorithm
 #-----------------------------------------------------------------------------------------------    
 # Functions
 #-----------------------------------------------------------------------------------------------
-
-def run_gym_q_learning_multi_agent(env, n_agents: int=1, render: bool=False, episodes: int=100, time_steps: int=10000):
+    
+def run_gym_q_learning_multi_agent(env, n_agents: int=1, render: bool=False, episodes: int=100, time_steps: int=10000, gamma: float=0.99, epsilon_max: float=1.0, epsilon_min: float=0.01, lr: float=0.7, decay: float=0.999, saved_path: str=None):
     """
         function to run independent q-learning algorithm on a gym env
 
@@ -41,7 +41,7 @@ def run_gym_q_learning_multi_agent(env, n_agents: int=1, render: bool=False, epi
     high = env.observation_space.high #maximum values of observation space
     n_states = np.prod(high - low + 1, dtype=int) #number of discretised states
 
-    agents = [QLearning(n_states, n_actions) for i in range(n_agents)]
+    agents = [QLearning(n_states, n_actions, gamma=gamma, epsilon_max=epsilon_max, epsilon_min=epsilon_min, lr=lr, decay=decay, saved_path=saved_path) for i in range(n_agents)]
 
     #init arrays to collect data
     all_obvs = []
@@ -124,7 +124,7 @@ def run_gym_q_learning_multi_agent(env, n_agents: int=1, render: bool=False, epi
 
     return all_obvs, all_actions, all_rewards, robot_paths
 
-def run_gym_q_learning_single_agent(env, render: bool=False, episodes: int=100, time_steps: int=10000):
+def run_gym_q_learning_single_agent(env, render: bool=False, episodes: int=100, time_steps: int=10000, gamma: float=0.99, epsilon_max: float=1.0, epsilon_min: float=0.01, lr: float=0.7, decay: float=0.999, saved_path: str=None):
     """
         function to run independent q-learning algorithm on a gym env
 
@@ -146,7 +146,7 @@ def run_gym_q_learning_single_agent(env, render: bool=False, episodes: int=100, 
     high = env.observation_space.high #maximum values of observation space
     n_states = round(np.prod(high - low + 1)) #number of discretised states
 
-    agent = QLearning(n_states, n_actions)
+    agent = QLearning(n_states, n_actions, gamma=gamma, epsilon_max=epsilon_max, epsilon_min=epsilon_min, lr=lr, decay=decay, saved_path=saved_path)
 
     #init arrays to collect data
     all_obvs = []

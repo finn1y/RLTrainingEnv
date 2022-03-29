@@ -14,7 +14,7 @@ from algorithms.rl_algorithm import RLAlgorithm
 # Functions
 #-----------------------------------------------------------------------------------------------
 
-def run_gym_actor_critic_multi_agent(env, n_agents: int=1, render: bool=False, episodes: int=100, time_steps: int=10000):
+def run_gym_actor_critic_multi_agent(env, n_agents: int=1, render: bool=False, episodes: int=100, time_steps: int=10000, hidden_size: int=128, gamma: float=0.99, decay: float=0.999, lr: float=0.001, lr_decay_steps: int=10000, saved_path: str=None):
     """
         function to run independent actor critic algorithm on a gym env
 
@@ -39,7 +39,7 @@ def run_gym_actor_critic_multi_agent(env, n_agents: int=1, render: bool=False, e
     n_actions = env.action_space.n #number of actions
     n_obvs = np.squeeze(env.observation_space.shape)
 
-    agents = [ActorCritic(n_obvs, n_actions) for i in range(n_agents)]
+    agents = [ActorCritic(n_obvs, n_actions, hidden_size=hidden_size, gamma=gamma, decay=decay, lr=lr, lr_decay_steps=lr_decay_steps, saved_path=saved_path) for i in range(n_agents)]
 
     #init arrays to collect data
     all_obvs = []
@@ -119,7 +119,7 @@ def run_gym_actor_critic_multi_agent(env, n_agents: int=1, render: bool=False, e
 
     return all_obvs, all_actions, all_rewards, all_losses, robot_paths
 
-def run_gym_actor_critic_single_agent(env, render: bool=False, episodes: int=100, time_steps: int=10000):
+def run_gym_actor_critic_single_agent(env, render: bool=False, episodes: int=100, time_steps: int=10000, hidden_size: int=128, gamma: float=0.99, decay: float=0.999, lr: float=0.001, lr_decay_steps: int=10000, saved_path: str=None):
     """
         function to run actor critic algorithm on a gym env
 
@@ -139,7 +139,7 @@ def run_gym_actor_critic_single_agent(env, render: bool=False, episodes: int=100
     n_actions = env.action_space.n #number of actions
     n_obvs = np.squeeze(env.observation_space.shape)
 
-    agent = ActorCritic(n_obvs, n_actions)
+    agent = ActorCritic(n_obvs, n_actions, hidden_size=hidden_size, gamma=gamma, decay=decay, lr=lr, lr_decay_steps=lr_decay_steps, saved_path=saved_path)
 
     #init arrays to collect data
     all_obvs = []
