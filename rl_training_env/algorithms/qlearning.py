@@ -37,8 +37,10 @@ def run_gym_q_learning_multi_agent(env, n_agents: int=1, render: bool=False, epi
 
     #get env variables
     n_actions = env.action_space.n #number of actions
-    low = env.observation_space.low #minimum values of observation space
-    high = env.observation_space.high #maximum values of observation space
+    #value range limited to -1000 to 1000 as maximum memory may be reach
+    #any env with memory requirement larger than this for observation space cannot be used with this implementation of qlearning
+    low = np.clip(env.observation_space.low, -1000, 1000) #minimum values of observation space
+    high = np.clip(env.observation_space.high, -1000, 1000) #maximum values of observation space
     n_states = np.prod(high - low + 1, dtype=int) #number of discretised states
 
     agents = [QLearning(n_states, n_actions, gamma=gamma, epsilon_max=epsilon_max, epsilon_min=epsilon_min, lr=lr, decay=decay, saved_path=saved_path) for i in range(n_agents)]
@@ -142,8 +144,10 @@ def run_gym_q_learning_single_agent(env, render: bool=False, episodes: int=100, 
     """
     #get env variables
     n_actions = env.action_space.n #number of actions
-    low = env.observation_space.low #minimum values of observation space
-    high = env.observation_space.high #maximum values of observation space
+    #value range limited to -1000 to 1000 as maximum memory may be reach
+    #any env with memory requirement larger than this for observation space cannot be used with this implementation of qlearning
+    low = np.clip(env.observation_space.low, -1000, 1000) #minimum values of observation space
+    high = np.clip(env.observation_space.high, -1000, 1000) #maximum values of observation space
     n_states = round(np.prod(high - low + 1)) #number of discretised states
 
     agent = QLearning(n_states, n_actions, gamma=gamma, epsilon_max=epsilon_max, epsilon_min=epsilon_min, lr=lr, decay=decay, saved_path=saved_path)

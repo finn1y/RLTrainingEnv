@@ -91,7 +91,7 @@ def get_installed_envs() -> list:
 
     #if package is installed then no warning is given so related envs can be added to list
     if not b'WARNING: Package(s) not found:' in gym:
-        envs.extend(["CartPole-v1", "Acrobot-v1", "MountainCar-v0", "MountainCarContinuous-v0", "Pendulum-v1"])
+        envs.extend(["CartPole-v1", "Acrobot-v1", "MountainCar-v0", "LunarLander-v2", "MountainCarContinuous-v0", "Pendulum-v1"])
     #if package is not installed then related envs cannot be added to list as not available on this system
     else:
         logging.warning("gym not installed, unable to use environments installed with gym package. Install with: pip install gym")
@@ -135,7 +135,8 @@ if __name__ == "__main__":
     #list of all possible environements
     envs = ["maze-random-5x5-v0", "maze-random-10x10-v0", "maze-random-100x100-v0", 
             "maze-sample-5x5-v0", "maze-sample-10x10-v0", "maze-sample-100x100-v0", "gym_robot_maze:RobotMaze-v1", 
-            "CartPole-v1", "Acrobot-v1", "MountainCar-v0", "MountainCarContinuous-v0", "Pendulum-v1"]
+            "CartPole-v1", "Acrobot-v1", "MountainCar-v0", "LunarLander-v2",
+            "MountainCarContinuous-v0", "Pendulum-v1"] 
     #list of all possible algorithms
     #algorithms[:6] are single-agent algorithms (can be used as independent multi-agent algorithms), algorithms[6:] are multi-agent algorithms
     algorithms = ["qlearning", "dqn", "drqn", "policy_gradient", "actor_critic", "ddpg", "ddrqn", "ma_actor_critic"]
@@ -153,10 +154,10 @@ if __name__ == "__main__":
         logging.getLogger().setLevel(logging.VDEBUG)
 
     #check that chosen algorithm can be used with chosen environment action space
-    if args.Algorithm == "ddpg" and args.Environment in envs[:10]:
-        raise Exception(f'DDPG can only be simulated with continuous action spaces: {envs[9:]}.')
-    if args.Algorithm in algorithms[:5] and args.Environment in envs[10:]:
-        raise Exception(f'{args.Algorithm} can only be simulated with discrete action spaces: {envs[:9]}.')
+    if args.Algorithm == "ddpg" and args.Environment in envs[:11]:
+        raise Exception(f'DDPG can only be simulated with continuous action spaces: {envs[11:]}.')
+    if args.Algorithm in algorithms[:5] and args.Environment in envs[11:]:
+        raise Exception(f'{args.Algorithm} can only be simulated with discrete action spaces: {envs[:11]}.')
 
     #check that multi-agent algorithms have multiple agents
     if args.Algorithm in algorithms[6:] and args.agents < 2:
