@@ -42,7 +42,7 @@ def get_args(envs: list, algorithms: list):
     parser.add_argument("-g", "--gamma", type=float, default=0.99, help="Discount factor to multiply by future expected rewards in the algorithm. Should be greater than 0 and less than 1")
     parser.add_argument("--epsilon-max", type=float, default=1.0, help="Epsilon max is the intial value of epsilon for epsilon-greedy policy. Should be greater than 0 and less than or equal to 1")
     parser.add_argument("--epsilon-min", type=float, default=0.01, help="Epsilon min is the final value of epsilon for epsilon-greedy policy which is decayed to over training from epsilon max. Should be greater than 0 and less then epsilon max")
-    parser.add_argument("-l", "--learning-rate", type=float, default=0.0001, help="Learning rate of the algorithm. Should be greater than 0 and less than 1")
+    parser.add_argument("-l", "--learning-rate", type=float, default=0.001, help="Learning rate of the algorithm. Should be greater than 0 and less than 1")
     parser.add_argument("--decay", type=float, default=0.999, help="Decay the base used for exponential decay of the learning rate (and epsilon where appropriate) during training if set to 1 will have no decay. Should be greater than 0 and less than 1")
     parser.add_argument("--maze-load-path", type=str, default=None, help="Path to load maze object from, for gym-robot-maze environment")
     parser.add_argument("--maze-save-path", type=str, default=None, help="Path to save maze object to, for gym-robot-maze environment")
@@ -175,46 +175,46 @@ if __name__ == "__main__":
     if args.agents > 1:
         #multi-agent
         if args.Algorithm == "qlearning":
-            obvs, actions, rewards, robot_paths = run_gym_q_learning_multi_agent(env, n_agents=args.agents, episodes=args.episodes, 
+            obvs, actions, rewards, robot_paths, times = run_gym_q_learning_multi_agent(env, n_agents=args.agents, episodes=args.episodes, 
                                                                             time_steps=args.time_steps, render=args.render, gamma=args.gamma, 
                                                                             epsilon_max=args.epsilon_max, epsilon_min=args.epsilon_min, lr=args.learning_rate, 
                                                                             decay=args.decay, saved_path=args.model_path)
 
         if args.Algorithm == "dqn":
-            obvs, actions, rewards, losses, robot_paths = run_gym_dqn_multi_agent(env, n_agents=args.agents, episodes=args.episodes,
+            obvs, actions, rewards, losses, robot_paths, times  = run_gym_dqn_multi_agent(env, n_agents=args.agents, episodes=args.episodes,
                                                                             time_steps=args.time_steps, render=args.render, hidden_size=args.hidden_size, 
                                                                             gamma=args.gamma, epsilon_max=args.epsilon_max, epsilon_min=args.epsilon_min,
                                                                             lr=args.learning_rate, decay=args.decay, batch_size=args.batch_size,
                                                                             saved_path=args.model_path)
 
         if args.Algorithm == "drqn":
-            obvs, actions, rewards, losses, robot_paths = run_gym_dqn_multi_agent(env, n_agents=args.agents, episodes=args.episodes, recurrent=True,
+            obvs, actions, rewards, losses, robot_paths, times  = run_gym_dqn_multi_agent(env, n_agents=args.agents, episodes=args.episodes, recurrent=True,
                                                                             time_steps=args.time_steps, render=args.render, hidden_size=args.hidden_size, 
                                                                             gamma=args.gamma, epsilon_max=args.epsilon_max, epsilon_min=args.epsilon_min,
                                                                             lr=args.learning_rate, decay=args.decay,
                                                                             batch_size=args.batch_size, saved_path=args.model_path)
 
         if args.Algorithm == "policy_gradient":
-            obvs, actions, rewards, losses, robot_paths = run_gym_policy_grad_multi_agent(env, n_agents=args.agents, episodes=args.episodes,
+            obvs, actions, rewards, losses, robot_paths, times  = run_gym_policy_grad_multi_agent(env, n_agents=args.agents, episodes=args.episodes,
                                                                             time_steps=args.time_steps, render=args.render, hidden_size=args.hidden_size, 
                                                                             gamma=args.gamma, lr=args.learning_rate, decay=args.decay, 
                                                                             saved_path=args.model_path)
             
         if args.Algorithm == "actor_critic": 
-            obvs, actions, rewards, losses, robot_paths = run_gym_actor_critic_multi_agent(env, n_agents=args.agents, episodes=args.episodes,
+            obvs, actions, rewards, losses, robot_paths, times  = run_gym_actor_critic_multi_agent(env, n_agents=args.agents, episodes=args.episodes,
                                                                             time_steps=args.time_steps, render=args.render, hidden_size=args.hidden_size, 
                                                                             gamma=args.gamma, lr=args.learning_rate, decay=args.decay, 
                                                                             saved_path=args.model_path)
 
         if args.Algorithm == "ddrqn":
-            obvs, actions, rewards, losses, robot_paths = run_gym_ddrqn_multi_agent(env, n_agents=args.agents, episodes=args.episodes,
+            obvs, actions, rewards, losses, robot_paths, times  = run_gym_ddrqn_multi_agent(env, n_agents=args.agents, episodes=args.episodes,
                                                                             time_steps=args.time_steps, render=args.render, hidden_size=args.hidden_size, 
                                                                             gamma=args.gamma, epsilon_max=args.epsilon_max, epsilon_min=args.epsilon_min,
                                                                             lr=args.learning_rate, decay=args.decay,
                                                                             saved_path=args.model_path)
 
         if args.Algorithm == "ma_actor_critic":
-            obvs, actions, rewards, losses, robot_paths = run_gym_ma_actor_critic_multi_agent(env, n_agents=args.agents, episodes=args.episodes,
+            obvs, actions, rewards, losses, robot_paths, times  = run_gym_ma_actor_critic_multi_agent(env, n_agents=args.agents, episodes=args.episodes,
                                                                             time_steps=args.time_steps, render=args.render, hidden_size=args.hidden_size, 
                                                                             gamma=args.gamma, lr=args.learning_rate, decay=args.decay, 
                                                                             saved_path=args.model_path)
@@ -222,39 +222,39 @@ if __name__ == "__main__":
     elif args.agents == 1:
         #single-agent
         if args.Algorithm == "qlearning":
-            obvs, actions, rewards, robot_paths = run_gym_q_learning_single_agent(env, episodes=args.episodes, time_steps=args.time_steps,
+            obvs, actions, rewards, robot_paths, times  = run_gym_q_learning_single_agent(env, episodes=args.episodes, time_steps=args.time_steps,
                                                                             render=args.render, gamma=args.gamma, epsilon_max=args.epsilon_max,
                                                                             epsilon_min=args.epsilon_min, lr=args.learning_rate, 
                                                                             decay=args.decay, saved_path=args.model_path)
 
         if args.Algorithm == "dqn":
-            obvs, actions, rewards, losses, robot_paths = run_gym_dqn_single_agent(env, episodes=args.episodes, time_steps=args.time_steps,
+            obvs, actions, rewards, losses, robot_paths, times  = run_gym_dqn_single_agent(env, episodes=args.episodes, time_steps=args.time_steps,
                                                                             render=args.render, hidden_size=args.hidden_size, gamma=args.gamma,
                                                                             epsilon_max=args.epsilon_max, epsilon_min=args.epsilon_min,
                                                                             lr=args.learning_rate, decay=args.decay,
                                                                             batch_size=args.batch_size, saved_path=args.model_path)
 
         if args.Algorithm == "drqn":
-            obvs, actions, rewards, losses, robot_paths = run_gym_dqn_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, recurrent=True,
+            obvs, actions, rewards, losses, robot_paths, times  = run_gym_dqn_single_agent(env, episodes=args.episodes, time_steps=args.time_steps, recurrent=True,
                                                                             render=args.render, hidden_size=args.hidden_size, gamma=args.gamma,
                                                                             epsilon_max=args.epsilon_max, epsilon_min=args.epsilon_min,
                                                                             lr=args.learning_rate, decay=args.decay,
                                                                             batch_size=args.batch_size, saved_path=args.model_path)
 
         if args.Algorithm == "policy_gradient":
-            obvs, actions, rewards, losses, robot_paths = run_gym_policy_grad_single_agent(env, episodes=args.episodes, time_steps=args.time_steps,
+            obvs, actions, rewards, losses, robot_paths, times  = run_gym_policy_grad_single_agent(env, episodes=args.episodes, time_steps=args.time_steps,
                                                                             render=args.render, hidden_size=args.hidden_size, gamma=args.gamma,
                                                                             lr=args.learning_rate, decay=args.decay, 
                                                                             saved_path=args.model_path)
 
         if args.Algorithm == "actor_critic": 
-            obvs, actions, rewards, losses, robot_paths = run_gym_actor_critic_single_agent(env, episodes=args.episodes, time_steps=args.time_steps,
+            obvs, actions, rewards, losses, robot_paths, times  = run_gym_actor_critic_single_agent(env, episodes=args.episodes, time_steps=args.time_steps,
                                                                             render=args.render, hidden_size=args.hidden_size, gamma=args.gamma,
                                                                             lr=args.learning_rate, decay=args.decay, 
                                                                             saved_path=args.model_path)
 
         if args.Algorithm == "ddpg":
-            obvs, actions, rewards, losses, robot_paths = run_gym_ddpg_single_agent(env, episodes=args.episodes, time_steps=args.time_steps,
+            obvs, actions, rewards, losses, robot_paths, times  = run_gym_ddpg_single_agent(env, episodes=args.episodes, time_steps=args.time_steps,
                                                                             render=args.render, hidden_size=args.hidden_size, gamma=args.gamma,
                                                                             lr=args.learning_rate, decay=args.decay, 
                                                                             saved_path=args.model_path)
@@ -270,7 +270,7 @@ if __name__ == "__main__":
         losses = None
 
     #process and save captured data
-    data = {"Parameters": parameters, "obvs": obvs, "actions": actions, "rewards": rewards, "losses": losses}
+    data = {"Parameters": parameters, "obvs": obvs, "actions": actions, "rewards": rewards, "losses": losses, "times": times}
 
     #add agents' path to data if available
     if args.Environment == "gym_robot_maze:RobotMaze-v1":

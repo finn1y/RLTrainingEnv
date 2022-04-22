@@ -6,6 +6,7 @@
 
 import sys, os, pickle
 import logging
+import time
 import numpy as np
 
 from algorithms.rl_algorithm import RLAlgorithm
@@ -28,7 +29,7 @@ def run_gym_q_learning_multi_agent(env, n_agents: int=1, render: bool=False, epi
 
         time steps is the maximum number of time steps per episode
 
-        returns obvs, actions, rewards and losses of all agents
+        returns obvs, actions, rewards and losses of all agents and time of each epsiode in seconds
     """
     if n_agents < 1:
         raise ValueError("Cannot have less than 1 agent")
@@ -46,6 +47,7 @@ def run_gym_q_learning_multi_agent(env, n_agents: int=1, render: bool=False, epi
     agents = [QLearning(n_states, n_actions, gamma=gamma, epsilon_max=epsilon_max, epsilon_min=epsilon_min, lr=lr, decay=decay, saved_path=saved_path) for i in range(n_agents)]
 
     #init arrays to collect data
+    all_times = []
     all_obvs = []
     all_actions = []
     all_rewards = []
@@ -66,6 +68,7 @@ def run_gym_q_learning_multi_agent(env, n_agents: int=1, render: bool=False, epi
         for i in range(n_agents):
             states[i] = agents[i].index_obv(obvs[i], low, high)
 
+        start_time = time.time()
         ep_obvs = []
         ep_actions = []
         total_rewards = np.zeros(n_agents)
@@ -97,6 +100,8 @@ def run_gym_q_learning_multi_agent(env, n_agents: int=1, render: bool=False, epi
             if done:
                 logging.info("Episode %u completed, after %u time steps, with total reward = %s", e, t, str(total_rewards))
 
+                ep_time = round((time.time() - start_time), 3)
+                all_times.append(ep_time)
                 all_obvs.append(ep_obvs)
                 all_actions.append(ep_actions)
                 all_rewards.append(total_rewards)
@@ -109,6 +114,8 @@ def run_gym_q_learning_multi_agent(env, n_agents: int=1, render: bool=False, epi
             elif t >= (time_steps - 1):
                 logging.info("Episode %u timed out, with total reward = %s", e, str(total_rewards))
 
+                ep_time = round((time.time() - start_time), 3)
+                all_times.append(ep_time)
                 all_obvs.append(ep_obvs)
                 all_actions.append(ep_actions)
                 all_rewards.append(total_rewards)
@@ -124,7 +131,7 @@ def run_gym_q_learning_multi_agent(env, n_agents: int=1, render: bool=False, epi
         for i in range(n_agents):
             agents[i].update_parameters(e)
 
-    return all_obvs, all_actions, all_rewards, robot_paths
+    return all_obvs, all_actions, all_rewards, robot_paths, all_times
 
 def run_gym_q_learning_single_agent(env, render: bool=False, episodes: int=100, time_steps: int=10000, gamma: float=0.99, epsilon_max: float=1.0, epsilon_min: float=0.01, lr: float=0.7, decay: float=0.999, saved_path: str=None):
     """
@@ -153,6 +160,7 @@ def run_gym_q_learning_single_agent(env, render: bool=False, episodes: int=100, 
     agent = QLearning(n_states, n_actions, gamma=gamma, epsilon_max=epsilon_max, epsilon_min=epsilon_min, lr=lr, decay=decay, saved_path=saved_path)
 
     #init arrays to collect data
+    all_times = []
     all_obvs = []
     all_actions = []
     all_rewards = []
@@ -220,7 +228,7 @@ def run_gym_q_learning_single_agent(env, render: bool=False, episodes: int=100, 
 
         agent.update_parameters(e)
 
-    return all_obvs, all_actions, all_rewards, robot_paths
+    return all_obvs, all_actions, all_rewards, robot_paths, all_times
 
 #-----------------------------------------------------------------------------------------------    
 # Classes

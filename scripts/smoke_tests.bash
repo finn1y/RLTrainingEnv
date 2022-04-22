@@ -39,7 +39,7 @@ Fails_str() {
 #all discrete envs to be tested
 ENVS=("maze-random-5x5-v0" "maze-random-10x10-v0" "maze-random-100x100-v0" 
         "maze-sample-5x5-v0" "maze-sample-10x10-v0" "maze-sample-100x100-v0" "gym_robot_maze:RobotMaze-v1" 
-        "CartPole-v1" "Acrobot-v1" "MountainCar-v0" "MountainCarContinuous-v0" "Pendulum-v1") 
+        "CartPole-v1" "Acrobot-v1" "MountainCar-v0" "LunarLander-v2" "MountainCarContinuous-v0" "Pendulum-v1") 
 
 #all discrete action algorithms to be tested
 ALGORITHMS=("qlearning" "dqn" "drqn" "policy_gradient" "actor_critic" "ddrqn" "ma_actor_critic" "ddpg")
@@ -67,17 +67,22 @@ fi
 for e in ${ENVS[@]}; do
     for a in ${ALGORITHMS[@]}; do
         #do not test mutli-agent only algorithms on single agent only envs
-        if [[ " ${ENVS[@]:7:4} " =~ " ${e} " && " ${ALGORITHMS[@]:5:2} " =~ " ${a} " ]]; then
+        if [[ " ${ENVS[@]:7:5} " =~ " ${e} " && " ${ALGORITHMS[@]:5:2} " =~ " ${a} " ]]; then
             continue
         fi
 
         #do not test continuous action algorithms on discrete action envs
-        if [[ " ${ENVS[@]:0:10} " =~ " ${e} " && " ${ALGORITHMS[7]} " == " ${a} " ]]; then
+        if [[ " ${ENVS[@]:0:11} " =~ " ${e} " && " ${ALGORITHMS[7]} " == " ${a} " ]]; then
             continue
         fi
 
         #do not test discrete action algorithms on continuous action envs
-        if [[ " ${ENVS[@]:10:2} " =~ " ${e} " && " ${ALGORITHMS[@]:0:7} " =~ " ${a} " ]]; then
+        if [[ " ${ENVS[@]:11:2} " =~ " ${e} " && " ${ALGORITHMS[@]:0:7} " =~ " ${a} " ]]; then
+            continue
+        fi
+
+        #do not test qlearning on LunarLander-v2
+        if [[ ${e} == "LunarLander-v2" && "${a}" == "qlearning" ]]; then
             continue
         fi
 

@@ -2,9 +2,10 @@
 
 import sys, os
 import argparse, pickle
-
 import numpy as np
 import matplotlib.pyplot as plt
+
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset, inset_axes
 
 def get_args():
     """
@@ -38,6 +39,22 @@ if __name__ == "__main__":
 
     env = args.directory[0].split('/')[-3]
 
+    plt.rc("font", size=28)
+    fig = plt.figure(figsize=(16, 10))
+
+    ax = plt.axes()
+    ax.set_xlabel("Episode")
+    ax.set_ylabel("avg. Reward across 5 episodes")
+    ax.set_title(r'Comparison of $\epsilon$-min parameter for Q-Learning')
+    ax.grid()
+
+#    axins = inset_axes(ax, 6, 3, loc="lower right")
+#    x1, y1, x2, y2 = 70, 0.33, 98, 0.412
+#    axins.set_xlim(x1, x2)
+#    axins.set_ylim(y1, y2)
+#    axins.set_xticklabels([])
+#    axins.set_yticklabels([])
+
     for directory in args.directory:
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), directory)
 
@@ -47,8 +64,8 @@ if __name__ == "__main__":
 
             if algorithm == "qlearning":
                 label = "Q-Learning"
-            elif algorithm == "policy_grad":
-                label = "REINFORCE"
+            elif algorithm == "policy_gradient":
+                label = "Policy Gradient"
             elif algorithm == "dqn":
                 label = "DQN"
             elif algorithm == "drqn":
@@ -61,15 +78,21 @@ if __name__ == "__main__":
                 label = "DDRQN"
             elif algorithm == "ma_actor_critic":
                 label = "Multi-Agent Actor Critic"
+            else:
+                label = algorithm
 
             plt_data = [data[f'{args.data_type}'][i] for i in range(len(data[f'{args.data_type}']))]
-            plt_data = [np.average(plt_data[i:i+5]) for i in range(0, len(plt_data), 5)]
-            e = [i * 5 for i in range(100)]
-            plt.plot(e, plt_data, label=label)
+            e = [i * 5 for i in range(20)]
+            ax.plot(e, plt_data, label=label, linewidth=4)
+            #axins.plot(e, plt_data, label=label, linewidth=4)
 
-    plt.title(f'Comparison of Algorithms on {env} Environment')
-    plt.xlabel("Episode")
-    plt.ylabel("Avg. Reward Across 10 Episodes")
-    plt.legend()
-    plt.show()
+
+    ax.plot(avg, linewidth=4)
+
+    ax.legend(bbox_to_anchor=(1, 1), loc="upper left", title=r'$\epsilon$-min')
+
+    #mark_inset(ax, axins, loc1=1, loc2=2, fc="none", ec="0.5")
+
+    plt.draw()
+    plt.savefig("./plot.png", bbox_inches="tight")
 

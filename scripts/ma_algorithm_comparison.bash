@@ -121,7 +121,7 @@ for a in ${ALGORITHMS[@]}; do
     #directory to mave data to
     DIR="$DIR_PREFIX/$ENV/$a"
 
-    CMD="./rl_training_env.py $ENV $a -e 500 -d $DIR -a 2" 
+    CMD="./rl_training_env.py $ENV $a -e 100 -d $DIR -a 2" 
 
     #if maze load path supplied and env is robot-maze add option to command
     if [[ -z $MAZE_LOAD_PATH && "$ENV" == "gym_robot_maze:RobotMaze-v1" ]]; then

@@ -7,6 +7,7 @@
 import numpy as np
 import tensorflow as tf
 import logging
+import time
 
 from algorithms.dqn import DQN
 
@@ -28,7 +29,7 @@ def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes
 
         time steps is the maximum number of time steps per episode
 
-        returns obvs, actions, rewards and losses of all agents
+        returns obvs, actions, rewards and losses of all agents and time of each epsiode in seconds
     """
     if n_agents < 1:
         raise ValueError("Cannot have less than 1 agent.")
@@ -42,6 +43,7 @@ def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes
     agents = [DDRQN(n_obvs, n_actions, hidden_size=hidden_size, gamma=gamma, epsilon_max=epsilon_max, epsilon_min=epsilon_min, lr=lr, decay=decay, lr_decay_steps=lr_decay_steps, saved_path=saved_path) for i in range(n_agents)]
 
     #init arrays to collect data
+    all_times = []
     all_obvs = []
     all_actions = []
     all_rewards = []
@@ -57,6 +59,7 @@ def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes
     for e in range(episodes): 
         obvs = env.reset()
         
+        start_time = time.time()
         ep_obvs = []
         ep_actions = []
         ep_losses = []
@@ -95,6 +98,8 @@ def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes
             if done:
                 logging.info("Episode %u completed, after %u time steps, with total reward = %s", e, t, str(total_rewards))
 
+                ep_time = round((time.time() - start_time), 3)
+                all_times.append(ep_time)
                 all_obvs.append(ep_obvs)
                 all_actions.append(ep_actions)
                 all_rewards.append(total_rewards)
@@ -108,6 +113,8 @@ def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes
             elif t >= (time_steps - 1):
                 logging.info("Episode %u timed out, with total reward = %s", e, str(total_rewards))
 
+                ep_time = round((time.time() - start_time), 3)
+                all_times.append(ep_time)
                 all_obvs.append(ep_obvs)
                 all_actions.append(ep_actions)
                 all_rewards.append(total_rewards)
@@ -124,7 +131,7 @@ def run_gym_ddrqn_multi_agent(env, n_agents: int=1, render: bool=False, episodes
         for i in range(n_agents):
             agents[i].update_parameters(e)
 
-    return all_obvs, all_actions, all_rewards, all_losses, robot_paths
+    return all_obvs, all_actions, all_rewards, all_losses, robot_paths, all_times
 
 #-----------------------------------------------------------------------------------------------    
 # Classes

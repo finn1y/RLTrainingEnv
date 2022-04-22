@@ -204,7 +204,7 @@ Get_args() {
                 fi
                 ;;
     
-            "learning-rate-decay")
+            "decay")
                 if [ $MAX_SET -eq 1 ]; then
                     MAX=1.0
                 fi
@@ -258,13 +258,13 @@ Get_save_dir() {
 #possible environments to test on
 ENVS=("maze-random-5x5-v0" "maze-random-10x10-v0" "maze-random-100x100-v0" 
         "maze-sample-5x5-v0" "maze-sample-10x10-v0" "maze-sample-100x100-v0" "gym_robot_maze:RobotMaze-v1" 
-        "CartPole-v1" "Acrobot-v1" "MountainCar-v0" "MountainCarContinuous-v0" "Pendulum-v1")
+        "CartPole-v1" "Acrobot-v1" "MountainCar-v0" "LunarLander-v2" "MountainCarContinuous-v0" "Pendulum-v1")
 
 #possible algorithms to test
 ALGORITHMS=("qlearning" "dqn" "drqn" "policy_gradient" "actor_critic" "ma_actor_critic" "ddrqn" "ddpg")
 
 #possible parameters to change
-PARAMETERS=("batch-size" "hidden-size" "gamma" "epsilon-min" "epsilon-max" "learning-rate" "learning-rate-decay")
+PARAMETERS=("batch-size" "hidden-size" "gamma" "epsilon-min" "epsilon-max" "learning-rate" "decay")
 
 #----------------------------------------------------------------------------------------
 # main
@@ -300,7 +300,7 @@ for p_val in ${P_VALS[@]}; do
     #directory to save data to
     DIR="$DIR_PREFIX/${ENV}_${ALGORITHM}/$PARAMETER/$p_val"
 
-    CMD="./rl_training_env.py $ENV $ALGORITHM -e 1000 --$PARAMETER $p_val -d $DIR" 
+    CMD="./rl_training_env.py $ENV $ALGORITHM -e 100 --$PARAMETER $p_val -d $DIR" 
 
     #if maze load path supplied and env is robot-maze add option to command
     if [[ -z $MAZE_LOAD_PATH && "$ENV" == "gym_robot_maze:RobotMaze-v1" ]]; then

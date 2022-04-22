@@ -20,10 +20,10 @@ cd "$(dirname $0)/../"
 ROBOT_MAZE_PATH="rl_training_env/robot_maze_sample/"
 
 #list of single agent environments
-SA_ENVS=("CartPole-v1" "maze-sample-5x5-v0" "maze-sample-10x10-v0" "maze-sample-100x100-v0" "gym_robot_maze:RobotMaze-v1")
+SA_ENVS=("CartPole-v1" "maze-sample-5x5-v0" "maze-sample-10x10-v0" "gym_robot_maze:RobotMaze-v1")
 
 #array of multi-agent environments
-MA_ENVS=("maze-sample-5x5-v0" "maze-sample-10x10-v0" "maze-sample-100x100-v0" "gym_robot_maze:RobotMaze-v1")
+MA_ENVS=("maze-sample-5x5-v0" "maze-sample-10x10-v0" "gym_robot_maze:RobotMaze-v1")
 
 #----------------------------------------------------------------------------------------
 # main
